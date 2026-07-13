@@ -56,21 +56,23 @@ export default function Dashboard({
     if (saved) setMemory(JSON.parse(saved));
   }, []);
 
-  useEffect(() => {
-    if (analysis) {
-      const entry = {
-        date: new Date().toLocaleString(),
-        rows: analysis.data_stats?.total_rows || 0,
-        anomalies: anomalies.length,
-        insights: insights.length,
-        story: analysis.data_story || "",
-      };
-      const updated = [entry, ...memory].slice(0, 10);
-      setMemory(updated);
-      localStorage.setItem("zevo_memory", JSON.stringify(updated));
-    }
-  }, [analysis]);
+ useEffect(() => {
+  if (!analysis) return;
 
+  setMemory((prevMemory) => {
+    const entry = {
+      date: new Date().toLocaleString(),
+      rows: analysis.data_stats?.total_rows || 0,
+      anomalies: anomalies.length,
+      insights: insights.length,
+      story: analysis.data_story || "",
+    };
+
+    const updated = [entry, ...prevMemory].slice(0, 10);
+    localStorage.setItem("zevo_memory", JSON.stringify(updated));
+    return updated;
+  });
+}, [analysis, anomalies.length, insights.length]);
   useEffect(() => {
     document.body.setAttribute("data-theme", darkMode ? "dark" : "light");
   }, [darkMode]);
@@ -212,7 +214,7 @@ export default function Dashboard({
     if (trend === "down") return <span className="trend down">↓ {pct || ""}</span>;
     return <span className="trend neutral">→</span>;
   };
-  const getEmoji = (code) => code === "RED" ? "🔴" : code === "YELLOW" ? "🟡" : code === "GREEN" ? "🟢" : code;
+  // const getEmoji = (code) => code === "RED" ? "🔴" : code === "YELLOW" ? "🟡" : code === "GREEN" ? "🟢" : code;
 
   const renderChart = (chart, i) => {
     const key = `${chart.x_column}_${chart.y_column}`;
