@@ -56,11 +56,11 @@ export default function Upload({ onFileSelected, error }) {
     },
   ];
 
-  const steps = [
-    { num: "05", label: "5 PM", desc: "Your team goes home" },
-    { num: "→", label: "Night Cycle", desc: "ZEVO begins its work" },
-    { num: "09", label: "9 AM", desc: "Your company wakes up smarter" },
-  ];
+  // const steps = [
+  //   { num: "05", label: "5 PM", desc: "Your team goes home" },
+  //   { num: "→", label: "Night Cycle", desc: "ZEVO begins its work" },
+  //   { num: "09", label: "9 AM", desc: "Your company wakes up smarter" },
+  // ];
 
   return (
     <div className="lp-root">

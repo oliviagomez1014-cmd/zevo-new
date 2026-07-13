@@ -132,12 +132,12 @@ export default function Dashboard({
     return <span className="trend neutral">→</span>;
   };
 
-  const getEmoji = (code) => {
-    if (code === "RED") return "🔴";
-    if (code === "YELLOW") return "🟡";
-    if (code === "GREEN") return "🟢";
-    return code;
-  };
+  // const getEmoji = (code) => {
+  //   if (code === "RED") return "🔴";
+  //   if (code === "YELLOW") return "🟡";
+  //   if (code === "GREEN") return "🟢";
+  //   return code;
+  // };
 
   return (
     <div className="dashboard">
