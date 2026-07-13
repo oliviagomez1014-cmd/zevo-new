@@ -3,6 +3,7 @@ import { useState, useRef } from "react";
 export default function Upload({ onFileSelected, error }) {
   const [dragging, setDragging] = useState(false);
   const [fileName, setFileName] = useState(null);
+  const [darkMode, setDarkMode] = useState(true);
   const inputRef = useRef();
 
   const handleFile = (file) => {
@@ -63,7 +64,7 @@ export default function Upload({ onFileSelected, error }) {
   // ];
 
   return (
-    <div className="lp-root">
+      <div className="lp-root">
       <div className="lp-grid-bg" />
       <div className="lp-radial-1" />
       <div className="lp-radial-2" />
@@ -82,6 +83,21 @@ export default function Upload({ onFileSelected, error }) {
           <span>Philosophy</span>
           <span>For Founders</span>
         </div>
+        <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+  <button
+    onClick={() => setDarkMode(!darkMode)}
+    className="theme-toggle"
+  >
+    {darkMode ? "☀️" : "🌙"}
+  </button>
+
+  <button
+    className="lp-nav-cta"
+    onClick={() => inputRef.current.click()}
+  >
+    Upload Your Data →
+  </button>
+</div>
         <button className="lp-nav-cta" onClick={() => inputRef.current.click()}>
           Upload Your Data →
         </button>

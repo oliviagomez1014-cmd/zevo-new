@@ -1068,3 +1068,96 @@ body {
   flex-shrink: 0;
 }
 .voice-btn:hover { border-color: var(--red); color: var(--red); }
+.app {
+  min-height: 100vh;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+/* LIGHT MODE */
+body[data-theme="light"] {
+  --bg:            #F8F9FC;
+  --bg2:           #F0F2F7;
+  --surface:       #FFFFFF;
+  --surface2:      #F4F5F9;
+  --card:          #FFFFFF;
+  --card-hover:    #F8F9FC;
+  --border:        rgba(0,0,0,0.08);
+  --border-hover:  rgba(255,30,60,0.3);
+  --text:          #0A0A14;
+  --text-sec:      #4A5568;
+  --text-muted:    #9CA3AF;
+  --text-dim:      #D1D5DB;
+}
+
+/* CHART CONTROLS */
+.chart-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.chart-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.color-picker {
+  width: 32px;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  background: none;
+  padding: 2px;
+}
+.color-picker-large {
+  width: 48px;
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  background: none;
+  padding: 2px;
+}
+.chart-type-select {
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text-sec);
+  padding: 6px 10px;
+  border-radius: var(--radius-xs);
+  font-size: 12px;
+  font-family: var(--font-body);
+  cursor: pointer;
+  outline: none;
+}
+.chart-type-select:focus { border-color: var(--red); }
+
+/* SETTINGS */
+.settings-grid { display: flex; flex-direction: column; gap: 14px; }
+.setting-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.setting-label { font-size: 14px; font-weight: 700; }
+.setting-control { display: flex; align-items: center; gap: 10px; }
+
+/* VOICE BTN */
+.voice-btn {
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text-sec);
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.voice-btn:hover { border-color: var(--red); color: var(--red); }

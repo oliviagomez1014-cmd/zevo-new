@@ -1,19 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis,
   Tooltip, ResponsiveContainer, PieChart, Pie, Cell
 } from "recharts";
 import { chatWithZevo, runScenario, runRealitySearch } from "../utils/claudeApi";
 
-const COLORS = ["#FF1E3C", "#3B4FFF", "#00FF88", "#FFB800", "#a78bfa", "#22D3EE"];
+const DEFAULT_COLORS = ["#FF1E3C", "#3B4FFF", "#00FF88", "#FFB800", "#a78bfa", "#22D3EE"];
 
 const PROMPT_CHIPS = [
   "What is my biggest risk?",
   "Find top performing products",
-  "What is causing the anomaly?",
   "Which region is underperforming?",
   "What should I focus on this week?",
   "How can I improve profitability?",
+  "What is the most urgent action?",
 ];
 
 export default function Dashboard({
@@ -39,6 +39,10 @@ export default function Dashboard({
   const [realityResult, setRealityResult] = useState(null);
   const [realityLoading, setRealityLoading] = useState(false);
   const [listening, setListening] = useState(false);
+  const [chartColor, setChartColor] = useState("#FF1E3C");
+  const [chartType, setChartType] = useState("bar");
+  const [darkMode, setDarkMode] = useState(true);
+  const [memory, setMemory] = useState([]);
 
   const kpis = analysis?.kpi_cards || [];
   const anomalies = analysis?.anomalies || [];
@@ -47,11 +51,41 @@ export default function Dashboard({
   const chartData = analysis?.chart_data || {};
   const confidence = analysis?.confidence || {};
 
+  useEffect(() => {
+    const saved = localStorage.getItem("zevo_memory");
+    if (saved) setMemory(JSON.parse(saved));
+  }, []);
+
+  useEffect(() => {
+    if (analysis) {
+      const entry = {
+        date: new Date().toLocaleString(),
+        rows: analysis.data_stats?.total_rows || 0,
+        anomalies: anomalies.length,
+        insights: insights.length,
+        story: analysis.data_story || "",
+      };
+      const updated = [entry, ...memory].slice(0, 10);
+      setMemory(updated);
+      localStorage.setItem("zevo_memory", JSON.stringify(updated));
+    }
+  }, [analysis]);
+
+  useEffect(() => {
+    document.body.setAttribute("data-theme", darkMode ? "dark" : "light");
+  }, [darkMode]);
+
   const speak = (text) => {
     if ("speechSynthesis" in window) {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.95;
+      utterance.rate = 0.9;
+      utterance.pitch = 1.1;
+      const voices = window.speechSynthesis.getVoices();
+      const preferred = voices.find(v =>
+        v.name.includes("Google") || v.name.includes("Natural") || v.name.includes("Premium")
+      );
+      if (preferred) utterance.voice = preferred;
       window.speechSynthesis.speak(utterance);
     }
   };
@@ -120,24 +154,117 @@ export default function Dashboard({
     setRealityLoading(false);
   };
 
-  const statusColor = (status) => {
-    if (status === "critical") return "#FF1E3C";
-    if (status === "warning") return "#FFB800";
-    return "#00FF88";
+  const handleExportPDF = () => {
+    const printContent = document.querySelector(".dash-body");
+    if (!printContent) { window.print(); return; }
+    const win = window.open("", "_blank");
+    win.document.write(`
+      <html>
+        <head>
+          <title>ZEVO — Strategic Brief</title>
+          <style>
+            body { font-family: 'Inter', sans-serif; background: #050508; color: #F0F4FF; padding: 40px; }
+            h1 { color: #FF1E3C; font-size: 32px; margin-bottom: 8px; }
+            .subtitle { color: #7A8499; margin-bottom: 32px; }
+            .section { margin-bottom: 28px; }
+            .section-title { font-size: 11px; font-weight: 800; letter-spacing: 3px; color: #FF1E3C; text-transform: uppercase; margin-bottom: 12px; }
+            .card { background: #0C0C18; border: 1px solid rgba(255,30,60,0.15); border-radius: 10px; padding: 16px; margin-bottom: 10px; }
+            .card-title { font-weight: 700; margin-bottom: 6px; }
+            .card-detail { color: #7A8499; font-size: 13px; line-height: 1.7; }
+            .footer { margin-top: 48px; color: #3D4560; font-size: 12px; border-top: 1px solid rgba(255,30,60,0.1); padding-top: 16px; }
+          </style>
+        </head>
+        <body>
+          <h1>ZEVO — Morning Brief</h1>
+          <div class="subtitle">${new Date().toLocaleDateString("en-IN", { weekday: "long", year: "numeric", month: "long", day: "numeric" })} · ${analysis?.data_stats?.total_rows || 0} rows analysed</div>
+          
+          <div class="section">
+            <div class="section-title">Urgent</div>
+            ${(analysis?.ceo_briefing?.urgent || []).map(i => `<div class="card"><div class="card-title">${i.title}</div><div class="card-detail">${i.detail}</div></div>`).join("")}
+          </div>
+          
+          <div class="section">
+            <div class="section-title">Watch</div>
+            ${(analysis?.ceo_briefing?.watch || []).map(i => `<div class="card"><div class="card-title">${i.title}</div><div class="card-detail">${i.detail}</div></div>`).join("")}
+          </div>
+
+          <div class="section">
+            <div class="section-title">Insights</div>
+            ${(analysis?.insights || []).map(i => `<div class="card"><div class="card-title">${i.title}</div><div class="card-detail">${i.detail}</div></div>`).join("")}
+          </div>
+
+          <div class="section">
+            <div class="section-title">Strategic Analysis</div>
+            <div class="card"><div class="card-detail">${analysis?.data_story || ""}</div></div>
+          </div>
+
+          <div class="footer">Generated by ZEVO Business Physics Engine · Employees work 9 to 5. ZEVO works 5 to 9.</div>
+        </body>
+      </html>
+    `);
+    win.document.close();
+    win.print();
   };
 
+  const statusColor = (s) => s === "critical" ? "#FF1E3C" : s === "warning" ? "#FFB800" : "#00FF88";
   const trendArrow = (trend, pct) => {
     if (trend === "up") return <span className="trend up">↑ {pct || ""}</span>;
     if (trend === "down") return <span className="trend down">↓ {pct || ""}</span>;
     return <span className="trend neutral">→</span>;
   };
+  const getEmoji = (code) => code === "RED" ? "🔴" : code === "YELLOW" ? "🟡" : code === "GREEN" ? "🟢" : code;
 
-  // const getEmoji = (code) => {
-  //   if (code === "RED") return "🔴";
-  //   if (code === "YELLOW") return "🟡";
-  //   if (code === "GREEN") return "🟢";
-  //   return code;
-  // };
+  const renderChart = (chart, i) => {
+    const key = `${chart.x_column}_${chart.y_column}`;
+    const data = chartData[key];
+    if (!data || data.length === 0) return null;
+    const type = chartType || chart.type;
+    const color = chartColor;
+    return (
+      <div key={i} className="chart-card">
+        <div className="chart-card-header">
+          <div className="chart-title">{chart.title}</div>
+          <div className="chart-controls">
+            <input type="color" value={chartColor} onChange={(e) => setChartColor(e.target.value)} title="Chart color" className="color-picker" />
+            <select value={chartType} onChange={(e) => setChartType(e.target.value)} className="chart-type-select">
+              <option value="bar">Bar</option>
+              <option value="line">Line</option>
+              <option value="pie">Pie</option>
+            </select>
+          </div>
+        </div>
+        <div className="chart-insight">{chart.insight}</div>
+        <div className="chart-body">
+          <ResponsiveContainer width="100%" height={220}>
+            {type === "bar" ? (
+              <BarChart data={data}>
+                <XAxis dataKey={chart.x_column} tick={{ fontSize: 11, fill: "#7A8499" }} />
+                <YAxis tick={{ fontSize: 11, fill: "#7A8499" }} />
+                <Tooltip contentStyle={{ background: "#0C0C18", border: "1px solid rgba(255,30,60,0.2)", color: "#F0F4FF", borderRadius: "8px" }} />
+                <Bar dataKey={chart.y_column} fill={color} radius={[4, 4, 0, 0]} />
+              </BarChart>
+            ) : type === "line" ? (
+              <LineChart data={data}>
+                <XAxis dataKey={chart.x_column} tick={{ fontSize: 11, fill: "#7A8499" }} />
+                <YAxis tick={{ fontSize: 11, fill: "#7A8499" }} />
+                <Tooltip contentStyle={{ background: "#0C0C18", border: "1px solid rgba(255,30,60,0.2)", color: "#F0F4FF", borderRadius: "8px" }} />
+                <Line type="monotone" dataKey={chart.y_column} stroke={color} strokeWidth={2} dot={false} />
+              </LineChart>
+            ) : (
+              <PieChart>
+                <Pie data={data} dataKey={chart.y_column} nameKey={chart.x_column} cx="50%" cy="50%" outerRadius={80}>
+                  {data.map((_, index) => (
+                    <Cell key={index} fill={index === 0 ? color : DEFAULT_COLORS[index % DEFAULT_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip contentStyle={{ background: "#0C0C18", border: "1px solid rgba(255,30,60,0.2)", color: "#F0F4FF", borderRadius: "8px" }} />
+              </PieChart>
+            )}
+          </ResponsiveContainer>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="dashboard">
@@ -147,29 +274,26 @@ export default function Dashboard({
           {activeTab === "anomalies" && `Anomalies ${anomalies.length > 0 ? `(${anomalies.length})` : ""}`}
           {activeTab === "insights" && "Insights"}
           {activeTab === "charts" && "Charts"}
-          {activeTab === "scenarios" && "Decision Lab"}
+          {activeTab === "scenarios" && "Scenarios"}
           {activeTab === "reality" && "Reality Search"}
-          {activeTab === "futures" && "Future Council"}
-          {activeTab === "evolution" && "Evolution Engine"}
-          {activeTab === "genome" && "Decision Genome"}
-          {activeTab === "memory" && "Company Memory"}
+          {activeTab === "memory" && "Business Memory"}
           {activeTab === "night" && "Infinite Night"}
+          {activeTab === "settings" && "Settings"}
         </div>
         <div className="dash-actions">
+          <button className="btn-ghost" onClick={() => setDarkMode(!darkMode)}>
+            {darkMode ? "☀️ Light" : "🌙 Dark"}
+          </button>
           <button className="btn-ghost" onClick={onCEOMode}>Morning Brief</button>
           <button className="btn-ghost" onClick={onNewUpload}>New Upload</button>
-          <button className="btn-primary" onClick={() => window.print()}>Export</button>
+          <button className="btn-primary" onClick={handleExportPDF}>Export PDF</button>
         </div>
       </div>
 
       <div className="mode-bar">
         <div className="mode-toggle">
-          <button className={`mode-btn ${mode === "autopilot" ? "active" : ""}`} onClick={() => onModeChange("autopilot")}>
-            Autopilot
-          </button>
-          <button className={`mode-btn ${mode === "copilot" ? "active" : ""}`} onClick={() => onModeChange("copilot")}>
-            Co-Pilot
-          </button>
+          <button className={`mode-btn ${mode === "autopilot" ? "active" : ""}`} onClick={() => onModeChange("autopilot")}>Autopilot</button>
+          <button className={`mode-btn ${mode === "copilot" ? "active" : ""}`} onClick={() => onModeChange("copilot")}>Co-Pilot</button>
         </div>
         <div className="confidence-bar">
           <span className="conf-label">Data quality:</span>
@@ -180,7 +304,6 @@ export default function Dashboard({
 
       <div className="dash-body">
 
-        {/* OVERVIEW */}
         {activeTab === "overview" && (
           <div className="tab-content">
             <div className="kpi-grid">
@@ -204,7 +327,7 @@ export default function Dashboard({
                 <div className="anomaly-preview-grid">
                   {anomalies.slice(0, 3).map((a, i) => (
                     <div key={i} className={`anomaly-preview ${a.severity}`}>
-                      <span className="anom-sev">{a.severity === "critical" ? "🔴" : a.severity === "warning" ? "🟡" : "🔵"}</span>
+                      <span className="anom-sev">{a.severity === "critical" ? "🔴" : "🟡"}</span>
                       <div>
                         <div className="anom-title">{a.title}</div>
                         <div className="anom-detail">{a.detail}</div>
@@ -223,153 +346,97 @@ export default function Dashboard({
           </div>
         )}
 
-        {/* ANOMALIES */}
         {activeTab === "anomalies" && (
           <div className="tab-content">
-            <p className="tab-intro">Every anomaly is sourced from your verified data. Click Explain to see exactly how ZEVO reached this conclusion.</p>
+            <p className="tab-intro">Every anomaly sourced from verified data. Click Explain for full reasoning.</p>
             {anomalies.length === 0 ? (
               <div className="empty-state">
                 <div className="empty-icon">✅</div>
                 <div className="empty-title">Everything looks healthy</div>
-                <div className="empty-sub">Your key metrics are within normal range.</div>
+                <div className="empty-sub">No anomalies detected in your data.</div>
               </div>
-            ) : (
-              <div className="anomaly-list">
-                {anomalies.map((a, i) => (
-                  <div key={i} className={`anomaly-card ${a.severity}`}>
-                    <div className="anomaly-top">
-                      <span className="anom-sev-icon">{a.severity === "critical" ? "🔴" : a.severity === "warning" ? "🟡" : "🔵"}</span>
-                      <div className="anomaly-main">
-                        <div className="anomaly-title">{a.title}</div>
-                        <div className="anomaly-detail">{a.detail}</div>
-                      </div>
-                      <button className="explain-btn" onClick={() => setExpandedAnomaly(expandedAnomaly === i ? null : i)}>
-                        {expandedAnomaly === i ? "Hide" : "Explain"}
-                      </button>
-                    </div>
-                    {expandedAnomaly === i && a.explanation && (
-                      <div className="explain-panel">
-                        <div className="explain-level">
-                          <div className="explain-level-label">Level 1 — Simple</div>
-                          <div className="explain-level-text">{a.explanation.simple}</div>
-                        </div>
-                        <div className="explain-level">
-                          <div className="explain-level-label">Level 2 — Business Reasoning</div>
-                          <div className="explain-level-text">{a.explanation.business}</div>
-                        </div>
-                        <div className="explain-level">
-                          <div className="explain-level-label">Level 3 — Full Calculation</div>
-                          <div className="explain-level-text calculation">{a.explanation.calculation}</div>
-                        </div>
-                      </div>
-                    )}
+            ) : anomalies.map((a, i) => (
+              <div key={i} className={`anomaly-card ${a.severity}`} style={{ marginBottom: "10px" }}>
+                <div className="anomaly-top">
+                  <span className="anom-sev-icon">{a.severity === "critical" ? "🔴" : "🟡"}</span>
+                  <div className="anomaly-main">
+                    <div className="anomaly-title">{a.title}</div>
+                    <div className="anomaly-detail">{a.detail}</div>
                   </div>
-                ))}
+                  <button className="explain-btn" onClick={() => setExpandedAnomaly(expandedAnomaly === i ? null : i)}>
+                    {expandedAnomaly === i ? "Hide" : "Explain"}
+                  </button>
+                </div>
+                {expandedAnomaly === i && a.explanation && (
+                  <div className="explain-panel">
+                    <div className="explain-level">
+                      <div className="explain-level-label">Simple</div>
+                      <div className="explain-level-text">{a.explanation.simple}</div>
+                    </div>
+                    <div className="explain-level">
+                      <div className="explain-level-label">Business Reasoning</div>
+                      <div className="explain-level-text">{a.explanation.business}</div>
+                    </div>
+                    <div className="explain-level">
+                      <div className="explain-level-label">Full Calculation</div>
+                      <div className="explain-level-text calculation">{a.explanation.calculation}</div>
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
+            ))}
           </div>
         )}
 
-        {/* INSIGHTS */}
         {activeTab === "insights" && (
           <div className="tab-content">
-            <p className="tab-intro">Analyst-level insights derived from your verified data.</p>
-            <div className="insights-list">
-              {insights.length === 0 ? (
-                <div className="empty-state">
-                  <div className="empty-icon">💡</div>
-                  <div className="empty-title">No insights generated</div>
-                  <div className="empty-sub">Upload a richer dataset to unlock insights.</div>
+            <p className="tab-intro">Analyst-level insights from your verified data.</p>
+            {insights.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-icon">💡</div>
+                <div className="empty-title">No insights generated</div>
+                <div className="empty-sub">Upload a richer dataset to unlock insights.</div>
+              </div>
+            ) : insights.map((ins, i) => (
+              <div key={i} className="insight-card">
+                <div className="insight-top">
+                  <div className="insight-title">{ins.title}</div>
+                  <span className={`conf-badge ${ins.confidence}`}>{ins.confidence}</span>
                 </div>
-              ) : insights.map((ins, i) => (
-                <div key={i} className="insight-card">
-                  <div className="insight-top">
-                    <div className="insight-title">{ins.title}</div>
-                    <span className={`conf-badge ${ins.confidence}`}>{ins.confidence}</span>
-                  </div>
-                  <div className="insight-detail">{ins.detail}</div>
-                  <div className="insight-meta">
-                    <span className="source-label">Source: {ins.source}</span>
-                    <span className="conf-reason">{ins.confidence_reason}</span>
-                  </div>
+                <div className="insight-detail">{ins.detail}</div>
+                <div className="insight-meta">
+                  <span className="source-label">Source: {ins.source}</span>
+                  <span className="conf-reason">{ins.confidence_reason}</span>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
         )}
 
-        {/* CHARTS */}
         {activeTab === "charts" && (
           <div className="tab-content">
             <div className="charts-grid">
-              {chartSuggestions.map((chart, i) => {
-                const key = `${chart.x_column}_${chart.y_column}`;
-                const data = chartData[key];
-                if (!data || data.length === 0) return null;
-                return (
-                  <div key={i} className="chart-card">
-                    <div className="chart-title">{chart.title}</div>
-                    <div className="chart-insight">{chart.insight}</div>
-                    <div className="chart-body">
-                      <ResponsiveContainer width="100%" height={220}>
-                        {chart.type === "bar" ? (
-                          <BarChart data={data}>
-                            <XAxis dataKey={chart.x_column} tick={{ fontSize: 11, fill: "#7A8499" }} />
-                            <YAxis tick={{ fontSize: 11, fill: "#7A8499" }} />
-                            <Tooltip contentStyle={{ background: "#0C0C18", border: "1px solid rgba(255,30,60,0.2)", color: "#F0F4FF", borderRadius: "8px" }} />
-                            <Bar dataKey={chart.y_column} fill="#FF1E3C" radius={[4, 4, 0, 0]} />
-                          </BarChart>
-                        ) : chart.type === "line" ? (
-                          <LineChart data={data}>
-                            <XAxis dataKey={chart.x_column} tick={{ fontSize: 11, fill: "#7A8499" }} />
-                            <YAxis tick={{ fontSize: 11, fill: "#7A8499" }} />
-                            <Tooltip contentStyle={{ background: "#0C0C18", border: "1px solid rgba(255,30,60,0.2)", color: "#F0F4FF", borderRadius: "8px" }} />
-                            <Line type="monotone" dataKey={chart.y_column} stroke="#FF1E3C" strokeWidth={2} dot={false} />
-                          </LineChart>
-                        ) : (
-                          <PieChart>
-                            <Pie data={data} dataKey={chart.y_column} nameKey={chart.x_column} cx="50%" cy="50%" outerRadius={80}>
-                              {data.map((entry, index) => (
-                                <Cell key={index} fill={COLORS[index % COLORS.length]} />
-                              ))}
-                            </Pie>
-                            <Tooltip contentStyle={{ background: "#0C0C18", border: "1px solid rgba(255,30,60,0.2)", color: "#F0F4FF", borderRadius: "8px" }} />
-                          </PieChart>
-                        )}
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-                );
-              })}
+              {chartSuggestions.map((chart, i) => renderChart(chart, i))}
               {chartSuggestions.length === 0 && (
                 <div className="empty-state">
                   <div className="empty-icon">📊</div>
                   <div className="empty-title">No charts generated</div>
-                  <div className="empty-sub">Upload a file with numeric columns to see charts.</div>
+                  <div className="empty-sub">Upload a file with numeric columns.</div>
                 </div>
               )}
             </div>
           </div>
         )}
 
-        {/* SCENARIOS */}
         {activeTab === "scenarios" && (
           <div className="tab-content">
             <div className="scenario-header">
-              <h3>Decision Lab</h3>
-              <p>Model what-if decisions on your actual data. ZEVO computes projected impact before you act.</p>
-              <div className="scenario-disclaimer">
-                This is a Simulation — not a guaranteed prediction.
-              </div>
+              <h3>Scenario Simulator</h3>
+              <p>Model what-if decisions on your actual data.</p>
+              <div className="scenario-disclaimer">Simulation — not a guaranteed prediction.</div>
             </div>
             <div className="scenario-input-area">
-              <input
-                className="scenario-input"
-                placeholder='e.g. "What if I increase prices by 10%?" or "What if I cut the bottom 20% of SKUs?"'
-                value={scenarioInput}
-                onChange={(e) => setScenarioInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleScenario()}
-              />
+              <input className="scenario-input" placeholder='e.g. "What if I increase prices by 10%?"' value={scenarioInput} onChange={(e) => setScenarioInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleScenario()} />
               <button className="btn-primary" onClick={handleScenario} disabled={scenarioLoading}>
                 {scenarioLoading ? "Simulating..." : "Run →"}
               </button>
@@ -406,33 +473,21 @@ export default function Dashboard({
                   </div>
                 </div>
                 <div className="scenario-recommendation">{scenarioResult.recommendation}</div>
-                <div className="scenario-confidence">Confidence: {scenarioResult.confidence} — {scenarioResult.confidence_reason}</div>
               </div>
             )}
-            {scenarioResult?.error && <div className="upload-error">{scenarioResult.error}</div>}
           </div>
         )}
 
-        {/* REALITY SEARCH */}
         {activeTab === "reality" && (
           <div className="tab-content">
             <div className="scenario-header">
               <h3>Reality Search</h3>
-              <p>Describe a future worth creating. ZEVO searches for the strongest paths to get there from where you actually stand today.</p>
-              <div className="scenario-disclaimer">
-                ZEVO returns the 3 most realistic strategic paths based on your actual data.
-              </div>
+              <p>Describe a future worth creating. ZEVO finds the strongest paths to get there.</p>
             </div>
             <div className="scenario-input-area">
-              <input
-                className="scenario-input"
-                placeholder='e.g. "Find futures where revenue grows 30% without increasing costs"'
-                value={realityInput}
-                onChange={(e) => setRealityInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleRealitySearch()}
-              />
+              <input className="scenario-input" placeholder='e.g. "Find futures where revenue grows 30%"' value={realityInput} onChange={(e) => setRealityInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleRealitySearch()} />
               <button className="btn-primary" onClick={handleRealitySearch} disabled={realityLoading}>
-                {realityLoading ? "Searching futures..." : "Search →"}
+                {realityLoading ? "Searching..." : "Search →"}
               </button>
             </div>
             {realityResult && !realityResult.error && (
@@ -451,13 +506,11 @@ export default function Dashboard({
                       </div>
                       <div className="path-moves">
                         <div className="moves-label">Key Moves</div>
-                        {future.key_moves?.map((move, j) => (
-                          <div key={j} className="path-move">→ {move}</div>
-                        ))}
+                        {future.key_moves?.map((move, j) => <div key={j} className="path-move">→ {move}</div>)}
                       </div>
                       <div className="path-risk">Risk: {future.biggest_risk}</div>
                       <div className="path-first-step">First step: <strong>{future.first_step}</strong></div>
-                      {i === 0 && <div className="path-recommended-badge">ZEVO Recommended Path</div>}
+                      {i === 0 && <div className="path-recommended-badge">ZEVO Recommended</div>}
                     </div>
                   ))}
                 </div>
@@ -466,163 +519,15 @@ export default function Dashboard({
                 )}
               </div>
             )}
-            {realityResult?.error && <div className="upload-error">{realityResult.error}</div>}
           </div>
         )}
 
-        {/* FUTURE COUNCIL */}
-        {activeTab === "futures" && (
-          <div className="tab-content">
-            <div className="engine-hero">
-              <div className="engine-eyebrow">STRATEGIC ENGINE 01</div>
-              <h2 className="engine-title">Future Council</h2>
-              <p className="engine-desc">
-                An immortal board that never sleeps, never forgets, and debates which future your company should inhabit. The Council convenes every night and returns with a verdict every morning.
-              </p>
-            </div>
-            <div className="council-grid">
-              {[
-                { type: "critical", label: "FUTURE A — HIGH PROBABILITY", title: "Consolidation and margin expansion", desc: "Based on your current data trajectory, the strongest near-term future involves stopping new market entry and doubling down on contribution margin improvements in your existing base. The Council estimates a 34% improvement in profitability within 2 quarters.", verdict: "Pursue with high confidence" },
-                { type: "warning", label: "FUTURE B — MEDIUM PROBABILITY", title: "Aggressive expansion before competition intensifies", desc: "The window for category leadership is narrowing. Moving aggressively into 2 new segments before a well-funded competitor could define the next 5 years. High risk, high reward.", verdict: "Requires capital validation first" },
-                { type: "healthy", label: "FUTURE C — EMERGING SIGNAL", title: "Platform pivot — becoming infrastructure", desc: "Your operational data suggests you have built capabilities that competitors would pay to access. A platform play — licensing your infrastructure — could create recurring revenue with near-zero marginal cost.", verdict: "Worth a 90-day experiment" },
-              ].map((item, i) => (
-                <div key={i} className={`council-card ${item.type}`}>
-                  <div className="council-card-label">{item.label}</div>
-                  <div className="council-card-title">{item.title}</div>
-                  <div className="council-card-desc">{item.desc}</div>
-                  <div className="council-card-verdict">
-                    <span className="verdict-label">Council Verdict: </span>{item.verdict}
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="engine-question-box">
-              <div className="engine-question-label">THE QUESTION ZEVO IS ASKING TONIGHT</div>
-              <div className="engine-question-text">
-                "Which of these three futures is worth building — and what would need to be true about your business for each one to succeed?"
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* EVOLUTION ENGINE */}
-        {activeTab === "evolution" && (
-          <div className="tab-content">
-            <div className="engine-hero">
-              <div className="engine-eyebrow">STRATEGIC ENGINE 02</div>
-              <h2 className="engine-title">Evolution Engine</h2>
-              <p className="engine-desc">
-                ZEVO does not optimize your current company. It designs the next version of it — new pricing architectures, organizational redesigns, market expansions, product concepts, and hiring structures.
-              </p>
-            </div>
-            <div className="evolution-grid">
-              {[
-                { category: "PRICING ARCHITECTURE", current: "You currently use flat-rate pricing across all customer segments.", proposal: "Shift to outcome-based pricing for enterprise accounts. Charge a percentage of measurable value delivered rather than a fixed fee. This aligns your incentives with customer success and removes price as a barrier to entry.", impact: "Estimated 40-60% increase in enterprise LTV", difficulty: "Medium — requires 90-day pilot" },
-                { category: "ORGANIZATIONAL DESIGN", current: "Your current structure creates functional silos between Sales and Product.", proposal: "Reorganize around customer journey stages rather than functions. A single team owns acquisition, another owns activation, another owns retention. Each team has its own P&L and full-stack capability.", impact: "2.3x faster product iteration cycles", difficulty: "High — 6 month transition" },
-                { category: "MARKET EXPANSION", current: "You are currently focused on a single geographic market.", proposal: "The Southeast Asia opportunity matches your India playbook almost exactly — similar customer behavior, similar price sensitivity, similar distribution gaps. One dedicated BD hire could validate this in 90 days.", impact: "Potential 30% revenue upside in 18 months", difficulty: "Low to start — one hire, one market" },
-                { category: "PRODUCT CONCEPT", current: "Your core product solves a single problem for one customer type.", proposal: "Your power users have built workarounds for 3 adjacent problems your product does not solve. Building these natively would increase switching costs dramatically and open a new revenue tier.", impact: "15-25% reduction in annual churn", difficulty: "Medium — 2 engineering quarters" },
-              ].map((item, i) => (
-                <div key={i} className="evolution-card">
-                  <div className="evolution-category">{item.category}</div>
-                  <div className="evolution-current"><span className="evo-label">Current State: </span>{item.current}</div>
-                  <div className="evolution-proposal"><span className="evo-label">ZEVO Proposes: </span>{item.proposal}</div>
-                  <div className="evolution-footer">
-                    <div className="evolution-impact">{item.impact}</div>
-                    <div className="evolution-difficulty">{item.difficulty}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* DECISION GENOME */}
-        {activeTab === "genome" && (
-          <div className="tab-content">
-            <div className="engine-hero">
-              <div className="engine-eyebrow">STRATEGIC ENGINE 03</div>
-              <h2 className="engine-title">Decision Genome</h2>
-              <p className="engine-desc">
-                ZEVO learns how your company naturally makes decisions — where it is systematically slow, where it consistently over-invests, what blind spots repeat. It intervenes before the pattern strikes again.
-              </p>
-            </div>
-            <div className="genome-patterns">
-              {[
-                { pattern: "Systematic underestimation of logistics costs", frequency: "Detected in 7 of last 9 market entries", severity: "critical", description: "Every time your company enters a new market, logistics costs come in 23% above projection. This has happened consistently. It is not a forecasting error — it is a structural blind spot in how your team scopes new markets.", intervention: "Before your next market entry, ZEVO will flag this pattern and require a logistics-first due diligence step." },
-                { pattern: "Delayed response to early churn signals", frequency: "Average 47-day lag from signal to action", severity: "warning", description: "Your data shows that customers who reduce engagement by more than 30% in a given month have an 84% probability of churning within 60 days. Your team typically responds 47 days after the signal appears.", intervention: "ZEVO will surface churn-risk accounts within 72 hours of signal detection going forward." },
-                { pattern: "Over-investment in top-of-funnel before mid-funnel is fixed", frequency: "Recurring in 4 of last 6 quarters", severity: "warning", description: "When growth slows, your instinct is to increase acquisition spend. But your conversion data shows the bottleneck is consistently in the activation stage, not awareness. More top-of-funnel spend into a broken mid-funnel accelerates burn without improving outcomes.", intervention: "ZEVO will require activation metrics to be reviewed before approving incremental acquisition budget." },
-              ].map((item, i) => (
-                <div key={i} className={`genome-card ${item.severity}`}>
-                  <div className="genome-card-header">
-                    <div className="genome-pattern-name">{item.pattern}</div>
-                    <div className={`genome-severity ${item.severity}`}>{item.frequency}</div>
-                  </div>
-                  <div className="genome-description">{item.description}</div>
-                  <div className="genome-intervention">
-                    <span className="intervention-label">ZEVO Intervention: </span>{item.intervention}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* COMPANY MEMORY */}
-        {activeTab === "memory" && (
-          <div className="tab-content">
-            <div className="engine-hero">
-              <div className="engine-eyebrow">STRATEGIC ENGINE 04</div>
-              <h2 className="engine-title">Company Memory</h2>
-              <p className="engine-desc">
-                ZEVO never forgets. Every analysis, every finding, every decision is stored and searchable. Ask ZEVO why something happened and it will trace it back through every brief it has ever delivered.
-              </p>
-            </div>
-            <div className="memory-stats">
-              <div className="memory-stat">
-                <div className="memory-stat-num">{analysis?.data_stats?.total_rows || 0}</div>
-                <div className="memory-stat-label">Rows Analysed</div>
-              </div>
-              <div className="memory-stat">
-                <div className="memory-stat-num">{anomalies.length}</div>
-                <div className="memory-stat-label">Anomalies Found</div>
-              </div>
-              <div className="memory-stat">
-                <div className="memory-stat-num">{insights.length}</div>
-                <div className="memory-stat-label">Insights Generated</div>
-              </div>
-              <div className="memory-stat">
-                <div className="memory-stat-num">1</div>
-                <div className="memory-stat-label">Sessions Remembered</div>
-              </div>
-            </div>
-            <div className="memory-timeline">
-              {[
-                { time: "Today, 7:00 AM", title: "Morning Brief delivered", detail: `Analysis of ${analysis?.data_stats?.total_rows || 0} rows completed. ${anomalies.length} anomalies detected. Strategic brief prepared.` },
-                { time: "Tonight, 11:00 PM", title: "Infinite Night begins", detail: "ZEVO will run its overnight simulation cycle. Findings delivered tomorrow morning." },
-                { time: "This week", title: "Evolution Engine proposals", detail: "ZEVO is preparing organizational and pricing redesign proposals based on your data patterns." },
-              ].map((item, i) => (
-                <div key={i} className="memory-item">
-                  <div className="memory-dot" />
-                  <div className="memory-time">{item.time}</div>
-                  <div className="memory-content">
-                    <div className="memory-title">{item.title}</div>
-                    <div className="memory-detail">{item.detail}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* INFINITE NIGHT */}
         {activeTab === "night" && (
           <div className="tab-content">
             <div className="engine-hero">
               <div className="engine-eyebrow">CORE SYSTEM</div>
               <h2 className="engine-title">Infinite Night</h2>
-              <p className="engine-desc">
-                While your team sleeps, ZEVO runs its night cycle. Hypotheses generated. Scenarios simulated. Assumptions challenged. Discoveries made. Every morning your company wakes up smarter.
-              </p>
+              <p className="engine-desc">While your team sleeps, ZEVO runs its night cycle. Every morning your company wakes up smarter.</p>
             </div>
             <div className="night-status">
               <div className="night-status-header">
@@ -657,7 +562,7 @@ export default function Dashboard({
               {(analysis?.morning_dispatch || []).length > 0 && (
                 <div className="night-dispatch-preview">
                   <div className="dispatch-preview-label">OVERNIGHT FINDINGS</div>
-                  {(analysis.morning_dispatch || []).map((item, i) => (
+                  {analysis.morning_dispatch.map((item, i) => (
                     <div key={i} className="dispatch-card">
                       <div className="dispatch-card-top">
                         <div className="dispatch-finding">{item.finding}</div>
@@ -676,9 +581,104 @@ export default function Dashboard({
           </div>
         )}
 
+        {activeTab === "memory" && (
+          <div className="tab-content">
+            <div className="engine-hero">
+              <div className="engine-eyebrow">BUSINESS MEMORY</div>
+              <h2 className="engine-title">Company Memory</h2>
+              <p className="engine-desc">ZEVO never forgets. Every session is stored locally so your analysis history builds over time.</p>
+            </div>
+            <div className="memory-stats">
+              <div className="memory-stat">
+                <div className="memory-stat-num">{memory.length}</div>
+                <div className="memory-stat-label">Sessions</div>
+              </div>
+              <div className="memory-stat">
+                <div className="memory-stat-num">{memory.reduce((a, b) => a + (b.rows || 0), 0).toLocaleString()}</div>
+                <div className="memory-stat-label">Rows Analysed</div>
+              </div>
+              <div className="memory-stat">
+                <div className="memory-stat-num">{memory.reduce((a, b) => a + (b.anomalies || 0), 0)}</div>
+                <div className="memory-stat-label">Anomalies Found</div>
+              </div>
+              <div className="memory-stat">
+                <div className="memory-stat-num">{memory.reduce((a, b) => a + (b.insights || 0), 0)}</div>
+                <div className="memory-stat-label">Insights Generated</div>
+              </div>
+            </div>
+            {memory.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-icon">🧠</div>
+                <div className="empty-title">No sessions yet</div>
+                <div className="empty-sub">Upload your first file to start building ZEVO's memory.</div>
+              </div>
+            ) : (
+              <div className="memory-timeline">
+                {memory.map((m, i) => (
+                  <div key={i} className="memory-item">
+                    <div className="memory-dot" />
+                    <div className="memory-time">{m.date}</div>
+                    <div className="memory-content">
+                      <div className="memory-title">{m.rows.toLocaleString()} rows analysed</div>
+                      <div className="memory-detail">{m.anomalies} anomalies · {m.insights} insights · {m.story?.slice(0, 120)}...</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button className="btn-ghost" style={{ marginTop: "16px" }} onClick={() => { localStorage.removeItem("zevo_memory"); setMemory([]); }}>
+              Clear Memory
+            </button>
+          </div>
+        )}
+
+        {activeTab === "settings" && (
+          <div className="tab-content">
+            <div className="engine-hero">
+              <div className="engine-eyebrow">SYSTEM</div>
+              <h2 className="engine-title">Settings</h2>
+              <p className="engine-desc">Customise your ZEVO experience.</p>
+            </div>
+            <div className="settings-grid">
+              <div className="setting-card">
+                <div className="setting-label">Theme</div>
+                <div className="setting-control">
+                  <button className="btn-ghost" onClick={() => setDarkMode(!darkMode)}>
+                    {darkMode ? "Switch to Light Mode ☀️" : "Switch to Dark Mode 🌙"}
+                  </button>
+                </div>
+              </div>
+              <div className="setting-card">
+                <div className="setting-label">Chart Color</div>
+                <div className="setting-control">
+                  <input type="color" value={chartColor} onChange={(e) => setChartColor(e.target.value)} className="color-picker-large" />
+                  <span style={{ color: "var(--text-sec)", fontSize: "13px", marginLeft: "10px" }}>{chartColor}</span>
+                </div>
+              </div>
+              <div className="setting-card">
+                <div className="setting-label">Default Chart Type</div>
+                <div className="setting-control">
+                  <select value={chartType} onChange={(e) => setChartType(e.target.value)} className="chart-type-select">
+                    <option value="bar">Bar Chart</option>
+                    <option value="line">Line Chart</option>
+                    <option value="pie">Pie Chart</option>
+                  </select>
+                </div>
+              </div>
+              <div className="setting-card">
+                <div className="setting-label">Business Memory</div>
+                <div className="setting-control">
+                  <button className="btn-ghost" onClick={() => { localStorage.removeItem("zevo_memory"); setMemory([]); alert("Memory cleared."); }}>
+                    Clear All Memory
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
 
-      {/* CO-PILOT */}
       {mode === "copilot" && (
         <div className="copilot-panel">
           <div className="copilot-header">CO-PILOT — ASK ZEVO ANYTHING ABOUT YOUR DATA</div>
@@ -689,7 +689,7 @@ export default function Dashboard({
           </div>
           <div className="chat-history">
             {chatHistory.length === 0 && (
-              <div className="chat-empty">Ask a question or pick a chip above. ZEVO answers from your verified data only.</div>
+              <div className="chat-empty">Ask a question or tap a chip. ZEVO answers from your verified data only.</div>
             )}
             {chatHistory.map((msg, i) => (
               <div key={i} className={`chat-msg ${msg.role}`}>

@@ -1,21 +1,18 @@
 export default function Sidebar({ activeTab, onTabChange }) {
   const navItems = [
-    { id: "briefing", label: "Morning Brief", icon: "◈", section: "Intelligence", dot: true },
-    { id: "night", label: "Infinite Night", icon: "◐", section: "Intelligence" },
+    { id: "briefing", label: "Morning Brief", icon: "◈", section: "Core", dot: true },
+    { id: "night", label: "Infinite Night", icon: "◐", section: "Core" },
     { id: "overview", label: "Overview", icon: "◎", section: "Analysis" },
     { id: "anomalies", label: "Anomalies", icon: "◬", section: "Analysis" },
     { id: "insights", label: "Insights", icon: "⬡", section: "Analysis" },
     { id: "charts", label: "Charts", icon: "◇", section: "Analysis" },
-    { id: "scenarios", label: "Decision Lab", icon: "◉", section: "Analysis" },
+    { id: "scenarios", label: "Scenarios", icon: "◉", section: "Analysis" },
     { id: "reality", label: "Reality Search", icon: "▣", section: "Analysis" },
-    { id: "futures", label: "Future Council", icon: "◈", section: "Strategic Engines" },
-    { id: "evolution", label: "Evolution Engine", icon: "◐", section: "Strategic Engines" },
-    { id: "genome", label: "Decision Genome", icon: "◎", section: "Strategic Engines" },
-    { id: "memory", label: "Company Memory", icon: "◬", section: "Strategic Engines" },
+    { id: "memory", label: "Business Memory", icon: "◈", section: "Intelligence" },
     { id: "settings", label: "Settings", icon: "◫", section: "System" },
   ];
 
-  const sections = ["Intelligence", "Analysis", "Strategic Engines", "System"];
+  const sections = ["Core", "Analysis", "Intelligence", "System"];
 
   return (
     <div className="sidebar">
