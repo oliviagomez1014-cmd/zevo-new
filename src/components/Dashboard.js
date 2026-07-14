@@ -52,25 +52,23 @@ export default function Dashboard({
   const confidence = analysis?.confidence || {};
 
 useEffect(() => {
-  const saved = localStorage.getItem("zevo_memory");
-  if (saved) setMemory(JSON.parse(saved));
-}, []);
+  if (!analysis) return;
 
-useEffect(() => {
-  if (analysis) {
-    const entry = {
-      date: new Date().toLocaleString(),
-      rows: analysis.data_stats?.total_rows || 0,
-      anomalies: anomalies.length,
-      insights: insights.length,
-      story: analysis.data_story || "",
-    };
-    const updated = [entry, ...memory].slice(0, 10);
-    setMemory(updated);
+  const entry = {
+    date: new Date().toLocaleString(),
+    rows: analysis.data_stats?.total_rows || 0,
+    anomalies: anomalies.length,
+    insights: insights.length,
+    story: analysis.data_story || "",
+  };
+
+  setMemory((prevMemory) => {
+    const updated = [entry, ...prevMemory].slice(0, 10);
     localStorage.setItem("zevo_memory", JSON.stringify(updated));
-  }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [analysis]);
+    return updated;
+  });
+
+}, [analysis, anomalies.length, insights.length]);
 
   useEffect(() => {
     document.body.setAttribute("data-theme", darkMode ? "dark" : "light");
@@ -213,7 +211,7 @@ useEffect(() => {
     if (trend === "down") return <span className="trend down">↓ {pct || ""}</span>;
     return <span className="trend neutral">→</span>;
   };
-  const getEmoji = (code) => code === "RED" ? "🔴" : code === "YELLOW" ? "🟡" : code === "GREEN" ? "🟢" : code;
+  // const getEmoji = (code) => code === "RED" ? "🔴" : code === "YELLOW" ? "🟡" : code === "GREEN" ? "🟢" : code;
 
   const renderChart = (chart, i) => {
     const key = `${chart.x_column}_${chart.y_column}`;
