@@ -718,7 +718,7 @@ export default function Dashboard({
             <button className="btn-primary" onClick={() => handleChat()}>→</button>
           </div>
         </div>
-      )}
+      )}  
     </div>
   );
 }
