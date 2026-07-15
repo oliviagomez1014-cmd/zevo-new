@@ -122,6 +122,9 @@ export default function App() {
 
   return (
     <div className="app">
+      <h1 style={{color:"red",fontSize:"40px"}}>
+    TEST APP.JS
+  </h1>
       {screen === "upload" && (
         <Upload onFileSelected={handleFileSelected} error={error} />
       )}

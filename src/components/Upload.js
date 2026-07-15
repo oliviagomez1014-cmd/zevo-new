@@ -98,9 +98,7 @@ export default function Upload({ onFileSelected, error }) {
     Upload Your Data →
   </button>
 </div>
-        <button className="lp-nav-cta" onClick={() => inputRef.current.click()}>
-          Upload Your Data →
-        </button>
+        
       </nav>
 
       {/* HERO */}

@@ -20,6 +20,8 @@ async function callClaude(prompt, maxTokens = 1500) {
 
   if (!response.ok) {
     const err = await response.text();
+    console.log("Claude response:", data.content[0].text);
+return data.content[0].text;
     throw new Error(`Claude API error: ${response.status} ${err}`);
   }
 
@@ -50,7 +52,13 @@ function safeJSON(text) {
   s = s.replace(/[\u{2600}-\u{26FF}]/gu, "");
   s = s.replace(/[\u{2700}-\u{27BF}]/gu, "");
 
-  return JSON.parse(s);
+ try {
+    return JSON.parse(s);
+  } catch (err) {
+    console.error("Claude returned invalid JSON:");
+    console.log(s);
+    throw err;
+  }
 }
 
 function fallback() {
