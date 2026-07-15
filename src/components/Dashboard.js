@@ -1,3 +1,4 @@
+import { loadMemory, saveSession, renameSession, deleteSession, clearAllMemory } from "../utils/memoryStore";
 import { useState, useEffect } from "react";
 import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis,
@@ -43,6 +44,23 @@ export default function Dashboard({
   const [chartType, setChartType] = useState("bar");
   const [darkMode, setDarkMode] = useState(true);
   const [memory, setMemory] = useState([]);
+  const [historySearch, setHistorySearch] = useState("");
+const [renamingId, setRenamingId] = useState(null);
+const [sessions, setSessions] = useState([]);
+const [chartFontSize, setChartFontSize] = useState(13);
+
+const refreshHistory = () => setSessions(loadMemory().sessions);
+
+useEffect(() => {
+  refreshHistory();
+  if (analysis) saveSession(analysis, profile, "Uploaded File");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [analysis]);
+
+const filteredSessions = sessions.filter(s =>
+  s.name.toLowerCase().includes(historySearch.toLowerCase()) ||
+  s.dataStory?.toLowerCase().includes(historySearch.toLowerCase())
+);
 
   const kpis = analysis?.kpi_cards || [];
   const anomalies = analysis?.anomalies || [];
@@ -222,30 +240,51 @@ useEffect(() => {
       <div key={i} className="chart-card">
         <div className="chart-card-header">
           <div className="chart-title">{chart.title}</div>
-          <div className="chart-controls">
-            <input type="color" value={chartColor} onChange={(e) => setChartColor(e.target.value)} title="Chart color" className="color-picker" />
-            <select value={chartType} onChange={(e) => setChartType(e.target.value)} className="chart-type-select">
-              <option value="bar">Bar</option>
-              <option value="line">Line</option>
-              <option value="pie">Pie</option>
-            </select>
-          </div>
-        </div>
+         <div className="chart-controls">
+  <input
+    type="color"
+    value={chartColor}
+    onChange={(e) => setChartColor(e.target.value)}
+    title="Chart color"
+    className="color-picker"
+  />
+
+  <select
+    value={chartType}
+    onChange={(e) => setChartType(e.target.value)}
+    className="chart-type-select"
+  >
+    <option value="bar">Bar</option>
+    <option value="line">Line</option>
+    <option value="pie">Pie</option>
+  </select>
+
+  <select
+    value={chartFontSize}
+    onChange={(e) => setChartFontSize(Number(e.target.value))}
+    className="chart-type-select"
+  >
+    <option value="10">Small Font</option>
+    <option value="13">Medium Font</option>
+    <option value="16">Large Font</option>
+  </select>
+</div>
+</div>
         <div className="chart-insight">{chart.insight}</div>
         <div className="chart-body">
           <ResponsiveContainer width="100%" height={220}>
             {type === "bar" ? (
               <BarChart data={data}>
-                <XAxis dataKey={chart.x_column} tick={{ fontSize: 11, fill: "#7A8499" }} />
-                <YAxis tick={{ fontSize: 11, fill: "#7A8499" }} />
+                <XAxis dataKey={chart.x_column} tick={{ fontSize:  chartFontSize , fill: "#7A8499" }} />
+                <YAxis tick={{ fontSize: chartFontSize, fill: "#7A8499" }} />
                 <Tooltip contentStyle={{ background: "#0C0C18", border: "1px solid rgba(255,30,60,0.2)", color: "#F0F4FF", borderRadius: "8px" }} />
                 <Bar dataKey={chart.y_column} fill={color} radius={[4, 4, 0, 0]} />
               </BarChart>
             ) : type === "line" ? (
               <LineChart data={data}>
-                <XAxis dataKey={chart.x_column} tick={{ fontSize: 11, fill: "#7A8499" }} />
-                <YAxis tick={{ fontSize: 11, fill: "#7A8499" }} />
-                <Tooltip contentStyle={{ background: "#0C0C18", border: "1px solid rgba(255,30,60,0.2)", color: "#F0F4FF", borderRadius: "8px" }} />
+                <XAxis dataKey={chart.x_column} tick={{ fontSize: chartFontSize, fill: "#7A8499" }} />
+                <YAxis tick={{ fontSize: chartFontSize, fill: "#7A8499" }} />
+                <Tooltip contentStyle={{ background: "#0C0C18", border: "1px solid rgba(255,30,60,0.2)", color: "#F0F4FF", borderRadius: "8px",fontSize: chartFontSize }} />
                 <Line type="monotone" dataKey={chart.y_column} stroke={color} strokeWidth={2} dot={false} />
               </LineChart>
             ) : (
@@ -580,55 +619,55 @@ useEffect(() => {
         )}
 
         {activeTab === "memory" && (
-          <div className="tab-content">
-            <div className="engine-hero">
-              <div className="engine-eyebrow">BUSINESS MEMORY</div>
-              <h2 className="engine-title">Company Memory</h2>
-              <p className="engine-desc">ZEVO never forgets. Every session is stored locally so your analysis history builds over time.</p>
-            </div>
-            <div className="memory-stats">
-              <div className="memory-stat">
-                <div className="memory-stat-num">{memory.length}</div>
-                <div className="memory-stat-label">Sessions</div>
-              </div>
-              <div className="memory-stat">
-                <div className="memory-stat-num">{memory.reduce((a, b) => a + (b.rows || 0), 0).toLocaleString()}</div>
-                <div className="memory-stat-label">Rows Analysed</div>
-              </div>
-              <div className="memory-stat">
-                <div className="memory-stat-num">{memory.reduce((a, b) => a + (b.anomalies || 0), 0)}</div>
-                <div className="memory-stat-label">Anomalies Found</div>
-              </div>
-              <div className="memory-stat">
-                <div className="memory-stat-num">{memory.reduce((a, b) => a + (b.insights || 0), 0)}</div>
-                <div className="memory-stat-label">Insights Generated</div>
-              </div>
-            </div>
-            {memory.length === 0 ? (
-              <div className="empty-state">
-                <div className="empty-icon">🧠</div>
-                <div className="empty-title">No sessions yet</div>
-                <div className="empty-sub">Upload your first file to start building ZEVO's memory.</div>
-              </div>
+  <div className="tab-content">
+    <div className="engine-hero">
+      <div className="engine-eyebrow">BUSINESS MEMORY</div>
+      <h2 className="engine-title">Analysis History</h2>
+      <p className="engine-desc">Every session is saved locally. Search, rename, reopen, or delete past analyses.</p>
+    </div>
+    <input
+      className="scenario-input"
+      placeholder="Search past analyses..."
+      value={historySearch}
+      onChange={(e) => setHistorySearch(e.target.value)}
+      style={{ marginBottom: "16px" }}
+    />
+    {filteredSessions.length === 0 ? (
+      <div className="empty-state">
+        <div className="empty-icon">🧠</div>
+        <div className="empty-title">No sessions yet</div>
+        <div className="empty-sub">Upload files to build ZEVO's memory over time.</div>
+      </div>
+    ) : (
+      <div className="history-list">
+        {filteredSessions.map((s) => (
+          <div key={s.id} className="history-card">
+            {renamingId === s.id ? (
+              <input
+                className="scenario-input"
+                defaultValue={s.name}
+                autoFocus
+                onBlur={(e) => { renameSession(s.id, e.target.value); setRenamingId(null); refreshHistory(); }}
+                onKeyDown={(e) => { if (e.key === "Enter") e.target.blur(); }}
+              />
             ) : (
-              <div className="memory-timeline">
-                {memory.map((m, i) => (
-                  <div key={i} className="memory-item">
-                    <div className="memory-dot" />
-                    <div className="memory-time">{m.date}</div>
-                    <div className="memory-content">
-                      <div className="memory-title">{m.rows.toLocaleString()} rows analysed</div>
-                      <div className="memory-detail">{m.anomalies} anomalies · {m.insights} insights · {m.story?.slice(0, 120)}...</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <div className="history-name" onClick={() => setRenamingId(s.id)}>{s.name}</div>
             )}
-            <button className="btn-ghost" style={{ marginTop: "16px" }} onClick={() => { localStorage.removeItem("zevo_memory"); setMemory([]); }}>
-              Clear Memory
-            </button>
+            <div className="history-meta">{new Date(s.date).toLocaleString()} · {s.rows} rows · {s.anomalies} anomalies · {s.insights} insights</div>
+            <div className="history-story">{s.dataStory?.slice(0, 140)}...</div>
+            <div className="history-actions">
+              <button className="btn-ghost" onClick={() => setRenamingId(s.id)}>Rename</button>
+              <button className="btn-ghost" onClick={() => { deleteSession(s.id); refreshHistory(); }}>Delete</button>
+            </div>
           </div>
-        )}
+        ))}
+      </div>
+    )}
+    <button className="btn-ghost" style={{ marginTop: "16px" }} onClick={() => { clearAllMemory(); refreshHistory(); }}>
+      Clear All History
+    </button>
+  </div>
+)}
 
         {activeTab === "settings" && (
           <div className="tab-content">
@@ -657,6 +696,7 @@ useEffect(() => {
                 <div className="setting-label">Default Chart Type</div>
                 <div className="setting-control">
                   <select value={chartType} onChange={(e) => setChartType(e.target.value)} className="chart-type-select">
+                    
                     <option value="bar">Bar Chart</option>
                     <option value="line">Line Chart</option>
                     <option value="pie">Pie Chart</option>
