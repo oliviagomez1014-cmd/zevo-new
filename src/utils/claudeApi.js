@@ -20,13 +20,12 @@ async function callClaude(prompt, maxTokens = 1500) {
 
   if (!response.ok) {
     const err = await response.text();
-    console.log("Claude response:", data.content[0].text);
-return data.content[0].text;
-    throw new Error(`Claude API error: ${response.status} ${err}`);
-  }
+  throw new Error(`Claude API error: ${response.status} ${err}`);
+}
 
-  const data = await response.json();
-  return data.content[0].text;
+const data = await response.json();
+console.log("Claude response:", data.content[0].text);
+return data.content[0].text;
 }
 
 function safeJSON(text) {
