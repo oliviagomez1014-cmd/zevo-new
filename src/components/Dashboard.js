@@ -210,7 +210,7 @@ useEffect(() => {
     if (trend === "down") return <span className="trend down">↓ {pct || ""}</span>;
     return <span className="trend neutral">→</span>;
   };
-  const getEmoji = (code) => code === "RED" ? "🔴" : code === "YELLOW" ? "🟡" : code === "GREEN" ? "🟢" : code;
+  // const getEmoji = (code) => code === "RED" ? "🔴" : code === "YELLOW" ? "🟡" : code === "GREEN" ? "🟢" : code;
 
   const renderChart = (chart, i) => {
     const key = `${chart.x_column}_${chart.y_column}`;
