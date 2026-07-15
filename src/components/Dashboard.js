@@ -43,7 +43,7 @@ export default function Dashboard({
   const [chartColor, setChartColor] = useState("#FF1E3C");
   const [chartType, setChartType] = useState("bar");
   const [darkMode, setDarkMode] = useState(true);
-  const [memory, setMemory] = useState([]);
+  const [, setMemory] = useState([]);
   const [historySearch, setHistorySearch] = useState("");
 const [renamingId, setRenamingId] = useState(null);
 const [sessions, setSessions] = useState([]);
