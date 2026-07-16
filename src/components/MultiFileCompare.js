@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { readFile, cleanData, computeSummary } from "../utils/dataEngine";
-import { readFile, cleanData, computeSummary } from "../utils/dataEngine";
+
 
 export default function MultiFileCompare({ onClose }) {
   const [fileA, setFileA] = useState(null);

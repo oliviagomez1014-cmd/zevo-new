@@ -8,6 +8,8 @@ import { chatWithZevo, runScenario, runRealitySearch } from "../utils/claudeApi"
 import ExportCenter from "./ExportCenter";
 import MultiFileCompare from "./MultiFileCompare";
 import { speakHuman } from "../utils/voiceEngine";
+// remove your old local `speak` function definition
+// then everywhere you called speak(x), it now calls speakHuman(x) automatically since we import it directly
 
 
 const DEFAULT_COLORS = ["#FF1E3C", "#3B4FFF", "#00FF88", "#FFB800", "#a78bfa", "#22D3EE"];
