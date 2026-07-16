@@ -7,7 +7,6 @@ import Sidebar from "./components/Sidebar";
 import AgentBar from "./components/AgentBar";
 import { readFile, cleanData, computeSummary, computeConfidence, groupAndSum } from "./utils/dataEngine";
 import { getAnalysis } from "./utils/claudeApi";
-import AgentBar from "./components/AgentBar";
 import "./App.css";
 
 export default function App() {
