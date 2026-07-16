@@ -7,11 +7,8 @@ import {
 import { chatWithZevo, runScenario, runRealitySearch } from "../utils/claudeApi";
 import ExportCenter from "./ExportCenter";
 import MultiFileCompare from "./MultiFileCompare";
+import { speakHuman } from "../utils/voiceEngine";
 
-
-// ...
-const [showExportCenter, setShowExportCenter] = useState(false);
-const [showCompare, setShowCompare] = useState(false);
 
 const DEFAULT_COLORS = ["#FF1E3C", "#3B4FFF", "#00FF88", "#FFB800", "#a78bfa", "#22D3EE"];
 
@@ -23,9 +20,7 @@ const PROMPT_CHIPS = [
   "How can I improve profitability?",
   "What is the most urgent action?",
 ];
-import { speakHuman } from "../utils/voiceEngine";
-// remove your old local `speak` function definition
-// then everywhere you called speak(x), it now calls speakHuman(x) automatically since we import it directly
+
 export default function Dashboard({
   analysis, profile, mode, onModeChange,
   onNewUpload, onCEOMode,
@@ -59,6 +54,8 @@ const [sessions, setSessions] = useState([]);
 const [chartFontSize, setChartFontSize] = useState(13);
 const [fullscreenChart, setFullscreenChart] = useState(null);
 const [activeChartId, setActiveChartId] = useState(null);
+const [showExportCenter, setShowExportCenter] = useState(false);
+const [showCompare, setShowCompare] = useState(false);
 
 const refreshHistory = () => setSessions(loadMemory().sessions);
 
