@@ -20,8 +20,7 @@ export default function App() {
   const [error, setError] = useState(null);
   const [isFirstTime] = useState(true);
   const [darkMode, setDarkMode] = useState(true);
-  const [showExportCenter, setShowExportCenter] = useState(false);
-const [showCompare, setShowCompare] = useState(false);
+
 
   const handleFileSelected = async (file) => {
     setError(null);
@@ -152,8 +151,7 @@ const [showCompare, setShowCompare] = useState(false);
   onNavigate={(tab) => { setActiveTab(tab); setScreen("dashboard"); }}
   onExportPDF={() => window.print()}
   onTriggerUpload={() => { setScreen("upload"); setAnalysis(null); setRawRows(null); }}
-  onOpenExportCenter={() => setShowExportCenter(true)}
-  onOpenCompare={() => setShowCompare(true)}
+
 />
           <div className="main-content">
            <AgentBar
@@ -193,8 +191,7 @@ const [showCompare, setShowCompare] = useState(false);
   onNavigate={(tab) => { setActiveTab(tab); setScreen("dashboard"); }}
   onExportPDF={() => window.print()}
   onTriggerUpload={() => { setScreen("upload"); setAnalysis(null); setRawRows(null); }}
-  onOpenExportCenter={() => setShowExportCenter(true)}
-  onOpenCompare={() => setShowCompare(true)}
+
 />
           <div className="main-content">
   <AgentBar
