@@ -9,7 +9,6 @@
     "@testing-library/user-event": "^13.5.0",
     "@types/three": "^0.185.0",
     "lucide-react": "^1.22.0",
-    "pptxgenjs": "^4.0.1",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-scripts": "5.0.1",

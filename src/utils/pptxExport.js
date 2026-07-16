@@ -1,250 +1,285 @@
-import pptxgen from "pptxgenjs";
+// pptxExport.js
+// Pure browser PPTX generation — no Node.js dependencies, works on Vercel.
+// Generates a real .pptx file using raw XML/ZIP (Office Open XML format).
 
-const DARK_BG = "050508";
-const RED = "FF1E3C";
-const WHITE = "F0F4FF";
-const GREY = "7A8499";
-const CARD_BG = "0C0C18";
-
-function addSlideBackground(slide) {
-  slide.background = { color: DARK_BG };
-}
-
-function addRedAccentLine(slide) {
-  slide.addShape("rect", { x: 0, y: 0, w: "100%", h: 0.04, fill: { color: RED } });
-}
-
-function addFooter(slide) {
-  slide.addText("ZEVO — Business Physics Engine  |  Employees work 9 to 5. ZEVO works 5 to 9.", {
-    x: 0.5, y: 6.9, w: 9, h: 0.3,
-    fontSize: 8, color: "3D4560", fontFace: "Arial",
+async function loadJSZip() {
+  return new Promise((resolve, reject) => {
+    if (window.JSZip) { resolve(window.JSZip); return; }
+    const script = document.createElement("script");
+    script.src = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";
+    script.onload = () => resolve(window.JSZip);
+    script.onerror = reject;
+    document.head.appendChild(script);
   });
 }
 
-export async function generatePPTX(analysis, chartRefs = []) {
-  const pptx = new pptxgen();
-  pptx.defineLayout({ name: "ZEVO", width: 10, height: 7.5 });
-  pptx.layout = "ZEVO";
+function escapeXml(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
 
+function emu(inches) {
+  return Math.round(inches * 914400);
+}
+
+function makeSlide(titleText, bodyLines = [], accentColor = "FF1E3C") {
+  const titleXml = `
+    <p:sp>
+      <p:nvSpPr>
+        <p:cNvPr id="2" name="Title"/>
+        <p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr>
+        <p:nvPr><p:ph type="title"/></p:nvPr>
+      </p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="${emu(0.4)}" y="${emu(0.2)}"/><a:ext cx="${emu(9.2)}" cy="${emu(0.8)}"/></a:xfrm>
+        <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+        <a:solidFill><a:srgbClr val="050508"/></a:solidFill>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:lstStyle/>
+        <a:p><a:r>
+          <a:rPr lang="en-US" sz="2400" b="1" dirty="0">
+            <a:solidFill><a:srgbClr val="${accentColor}"/></a:solidFill>
+            <a:latin typeface="Arial"/>
+          </a:rPr>
+          <a:t>${escapeXml(titleText)}</a:t>
+        </a:r></a:p>
+      </p:txBody>
+    </p:sp>`;
+
+  const bodyXml = bodyLines.length > 0 ? `
+    <p:sp>
+      <p:nvSpPr>
+        <p:cNvPr id="3" name="Body"/>
+        <p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr>
+        <p:nvPr><p:ph idx="1"/></p:nvPr>
+      </p:nvSpPr>
+      <p:spPr>
+        <a:xfrm><a:off x="${emu(0.4)}" y="${emu(1.2)}"/><a:ext cx="${emu(9.2)}" cy="${emu(5.5)}"/></a:xfrm>
+        <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+        <a:solidFill><a:srgbClr val="050508"/></a:solidFill>
+      </p:spPr>
+      <p:txBody>
+        <a:bodyPr/>
+        <a:lstStyle/>
+        ${bodyLines.map((line) => {
+          const isHeading = line.startsWith("##");
+          const isRed = line.startsWith("!!");
+          const text = line.replace(/^##/, "").replace(/^!!/, "").trim();
+          const color = isHeading ? accentColor : isRed ? "FF4444" : "C8D0E0";
+          const size = isHeading ? "1600" : "1200";
+          const bold = isHeading ? "1" : "0";
+          return `<a:p><a:r>
+            <a:rPr lang="en-US" sz="${size}" b="${bold}" dirty="0">
+              <a:solidFill><a:srgbClr val="${color}"/></a:solidFill>
+              <a:latin typeface="Arial"/>
+            </a:rPr>
+            <a:t>${escapeXml(text)}</a:t>
+          </a:r></a:p>`;
+        }).join("\n")}
+      </p:txBody>
+    </p:sp>` : "";
+
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+       xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <p:cSld>
+    <p:bg>
+      <p:bgPr>
+        <a:solidFill><a:srgbClr val="050508"/></a:solidFill>
+      </p:bgPr>
+    </p:bg>
+    <p:spTree>
+      <p:nvGrpSpPr>
+        <p:cNvPr id="1" name=""/>
+        <p:cNvGrpSpPr/>
+        <p:nvPr/>
+      </p:nvGrpSpPr>
+      <p:grpSpPr>
+        <a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/>
+        <a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm>
+      </p:grpSpPr>
+      ${titleXml}
+      ${bodyXml}
+    </p:spTree>
+  </p:cSld>
+  <p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr>
+</p:sld>`;
+}
+
+export async function generatePPTX(analysis) {
+  const JSZip = await loadJSZip();
+  const zip = new JSZip();
   const briefing = analysis?.ceo_briefing || {};
   const insights = analysis?.insights || [];
   const anomalies = analysis?.anomalies || [];
-  const rows = analysis?.data_stats?.total_rows || 0;
-
-  // ── SLIDE 1: TITLE ──────────────────────────────
-  const s1 = pptx.addSlide();
-  addSlideBackground(s1);
-  addRedAccentLine(s1);
-
-  s1.addText("ZEVO", {
-    x: 0.6, y: 1.0, w: 8.8, h: 1.4,
-    fontSize: 80, bold: true, color: RED, fontFace: "Arial",
-  });
-  s1.addText("STRATEGIC BRIEF", {
-    x: 0.6, y: 2.2, w: 8.8, h: 0.7,
-    fontSize: 28, bold: true, color: WHITE, fontFace: "Arial", charSpacing: 8,
-  });
-  s1.addText(new Date().toLocaleDateString("en-IN", { weekday: "long", year: "numeric", month: "long", day: "numeric" }), {
-    x: 0.6, y: 3.0, w: 8.8, h: 0.4,
-    fontSize: 14, color: GREY, fontFace: "Arial",
-  });
-  s1.addText(`${rows.toLocaleString()} rows analysed`, {
-    x: 0.6, y: 3.5, w: 4, h: 0.35,
-    fontSize: 13, color: RED, fontFace: "Arial",
-  });
-  addFooter(s1);
-
-  // ── SLIDE 2: CEO BRIEF ──────────────────────────
-  const s2 = pptx.addSlide();
-  addSlideBackground(s2);
-  addRedAccentLine(s2);
-
-  s2.addText("MORNING BRIEF", {
-    x: 0.6, y: 0.3, w: 8.8, h: 0.5,
-    fontSize: 11, bold: true, color: RED, fontFace: "Arial", charSpacing: 4,
-  });
-  s2.addText(briefing.greeting || "Good morning.", {
-    x: 0.6, y: 0.9, w: 8.8, h: 0.4,
-    fontSize: 15, color: GREY, fontFace: "Arial", italic: true,
-  });
-
-  let yPos = 1.5;
-  const allItems = [
-    ...(briefing.urgent || []).map(i => ({ ...i, tag: "URGENT", color: RED })),
-    ...(briefing.watch || []).map(i => ({ ...i, tag: "WATCH", color: "FFB800" })),
-    ...(briefing.healthy || []).map(i => ({ ...i, tag: "HEALTHY", color: "00FF88" })),
-  ].slice(0, 5);
-
-  allItems.forEach((item) => {
-    s2.addText(item.tag, {
-      x: 0.6, y: yPos, w: 1.2, h: 0.28,
-      fontSize: 8, bold: true, color: item.color, fontFace: "Arial", charSpacing: 2,
-    });
-    s2.addText(item.title || "", {
-      x: 1.9, y: yPos, w: 7.5, h: 0.28,
-      fontSize: 12, bold: true, color: WHITE, fontFace: "Arial",
-    });
-    s2.addText(item.detail || "", {
-      x: 1.9, y: yPos + 0.28, w: 7.5, h: 0.3,
-      fontSize: 11, color: GREY, fontFace: "Arial",
-    });
-    yPos += 0.75;
-  });
-
-  if (briefing.top_action) {
-    s2.addShape("rect", { x: 0.6, y: yPos, w: 8.8, h: 0.85, fill: { color: "1A0A10" }, line: { color: RED, width: 1 } });
-    s2.addText("TODAY'S TOP ACTION", {
-      x: 0.8, y: yPos + 0.08, w: 4, h: 0.25,
-      fontSize: 8, bold: true, color: RED, fontFace: "Arial", charSpacing: 2,
-    });
-    s2.addText(briefing.top_action.action || "", {
-      x: 0.8, y: yPos + 0.32, w: 8.2, h: 0.35,
-      fontSize: 12, color: WHITE, fontFace: "Arial",
-    });
-  }
-  addFooter(s2);
-
-  // ── SLIDE 3: KEY INSIGHTS ───────────────────────
-  const s3 = pptx.addSlide();
-  addSlideBackground(s3);
-  addRedAccentLine(s3);
-
-  s3.addText("KEY INSIGHTS", {
-    x: 0.6, y: 0.3, w: 8.8, h: 0.5,
-    fontSize: 11, bold: true, color: RED, fontFace: "Arial", charSpacing: 4,
-  });
-
-  let iy = 1.0;
-  insights.slice(0, 5).forEach((ins, idx) => {
-    s3.addShape("rect", { x: 0.6, y: iy, w: 8.8, h: 0.9, fill: { color: CARD_BG }, line: { color: "1A1A2E", width: 1 } });
-    s3.addText(`${String(idx + 1).padStart(2, "0")}`, {
-      x: 0.7, y: iy + 0.08, w: 0.5, h: 0.3,
-      fontSize: 10, bold: true, color: RED, fontFace: "Arial",
-    });
-    s3.addText(ins.title || "", {
-      x: 1.3, y: iy + 0.08, w: 7.8, h: 0.3,
-      fontSize: 12, bold: true, color: WHITE, fontFace: "Arial",
-    });
-    s3.addText(ins.detail || "", {
-      x: 1.3, y: iy + 0.42, w: 7.8, h: 0.35,
-      fontSize: 10, color: GREY, fontFace: "Arial",
-    });
-    iy += 1.05;
-  });
-  addFooter(s3);
-
-  // ── SLIDE 4: ANOMALIES ──────────────────────────
-  if (anomalies.length > 0) {
-    const s4 = pptx.addSlide();
-    addSlideBackground(s4);
-    addRedAccentLine(s4);
-
-    s4.addText("ANOMALIES DETECTED", {
-      x: 0.6, y: 0.3, w: 8.8, h: 0.5,
-      fontSize: 11, bold: true, color: RED, fontFace: "Arial", charSpacing: 4,
-    });
-
-    let ay = 1.0;
-    anomalies.slice(0, 4).forEach((a) => {
-      const aColor = a.severity === "critical" ? RED : "FFB800";
-      s4.addShape("rect", { x: 0.6, y: ay, w: 8.8, h: 1.0, fill: { color: CARD_BG }, line: { color: aColor, width: 1 } });
-      s4.addShape("rect", { x: 0.6, y: ay, w: 0.06, h: 1.0, fill: { color: aColor } });
-      s4.addText(a.severity?.toUpperCase() || "", {
-        x: 0.8, y: ay + 0.08, w: 2, h: 0.25,
-        fontSize: 8, bold: true, color: aColor, fontFace: "Arial", charSpacing: 2,
-      });
-      s4.addText(a.title || "", {
-        x: 0.8, y: ay + 0.32, w: 8.2, h: 0.3,
-        fontSize: 12, bold: true, color: WHITE, fontFace: "Arial",
-      });
-      s4.addText(a.detail || "", {
-        x: 0.8, y: ay + 0.62, w: 8.2, h: 0.28,
-        fontSize: 10, color: GREY, fontFace: "Arial",
-      });
-      ay += 1.15;
-    });
-    addFooter(s4);
-  }
-
-  // ── SLIDE 5: DATA STORY ─────────────────────────
-  const s5 = pptx.addSlide();
-  addSlideBackground(s5);
-  addRedAccentLine(s5);
-
-  s5.addText("STRATEGIC ANALYSIS", {
-    x: 0.6, y: 0.3, w: 8.8, h: 0.5,
-    fontSize: 11, bold: true, color: RED, fontFace: "Arial", charSpacing: 4,
-  });
-  s5.addShape("rect", { x: 0.6, y: 1.0, w: 8.8, h: 4.5, fill: { color: CARD_BG }, line: { color: "1A1A2E", width: 1 } });
-  s5.addText(analysis?.data_story || "No strategic analysis generated.", {
-    x: 0.9, y: 1.3, w: 8.2, h: 4.0,
-    fontSize: 14, color: WHITE, fontFace: "Arial", valign: "top",
-    breakLine: true, lineSpacingMultiple: 1.6,
-  });
-  addFooter(s5);
-
-  // ── SLIDE 6: KPI SUMMARY ────────────────────────
   const kpis = analysis?.kpi_cards || [];
+
+  const slides = [];
+
+  // Slide 1 — Title
+  slides.push(makeSlide(
+    "ZEVO — STRATEGIC BRIEF",
+    [
+      `##${new Date().toLocaleDateString("en-IN", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}`,
+      `##${(analysis?.data_stats?.total_rows || 0).toLocaleString()} rows analysed`,
+      "",
+      "Employees work 9 to 5. ZEVO works 5 to 9.",
+      "Business Physics Engine",
+    ]
+  ));
+
+  // Slide 2 — Morning Brief
+  const briefLines = [
+    "##MORNING BRIEF",
+    briefing.greeting || "",
+    "",
+    ...((briefing.urgent || []).flatMap(i => [`!!URGENT: ${i.title}`, i.detail || "", ""])),
+    ...((briefing.watch || []).flatMap(i => [`##WATCH: ${i.title}`, i.detail || "", ""])),
+    ...((briefing.healthy || []).flatMap(i => [`${i.title}`, i.detail || "", ""])),
+  ];
+  if (briefing.top_action) {
+    briefLines.push("", "##TODAY'S TOP ACTION", briefing.top_action.action || "");
+  }
+  slides.push(makeSlide("MORNING BRIEF", briefLines));
+
+  // Slide 3 — KPIs
   if (kpis.length > 0) {
-    const s6 = pptx.addSlide();
-    addSlideBackground(s6);
-    addRedAccentLine(s6);
-
-    s6.addText("KPI SUMMARY", {
-      x: 0.6, y: 0.3, w: 8.8, h: 0.5,
-      fontSize: 11, bold: true, color: RED, fontFace: "Arial", charSpacing: 4,
+    const kpiLines = ["##KEY PERFORMANCE INDICATORS", ""];
+    kpis.slice(0, 6).forEach(k => {
+      kpiLines.push(`##${k.label}`);
+      kpiLines.push(`${k.value}  (${k.trend === "up" ? "↑" : k.trend === "down" ? "↓" : "→"} ${k.trend_pct || ""})`);
+      kpiLines.push(k.context || "");
+      kpiLines.push("");
     });
-
-    const cols = 3;
-    const cardW = 2.8;
-    const cardH = 1.4;
-    const startX = 0.55;
-    const startY = 1.0;
-    const gap = 0.15;
-
-    kpis.slice(0, 6).forEach((kpi, idx) => {
-      const col = idx % cols;
-      const row = Math.floor(idx / cols);
-      const x = startX + col * (cardW + gap);
-      const y = startY + row * (cardH + gap);
-      const borderColor = kpi.status === "critical" ? RED : kpi.status === "warning" ? "FFB800" : "00FF88";
-
-      s6.addShape("rect", { x, y, w: cardW, h: cardH, fill: { color: CARD_BG }, line: { color: "1A1A2E", width: 1 } });
-      s6.addShape("rect", { x, y, w: cardW, h: 0.04, fill: { color: borderColor } });
-      s6.addText((kpi.label || "").toUpperCase(), {
-        x: x + 0.15, y: y + 0.15, w: cardW - 0.3, h: 0.25,
-        fontSize: 8, color: GREY, fontFace: "Arial", charSpacing: 1,
-      });
-      s6.addText(kpi.value || "", {
-        x: x + 0.15, y: y + 0.42, w: cardW - 0.3, h: 0.5,
-        fontSize: 22, bold: true, color: WHITE, fontFace: "Arial",
-      });
-      s6.addText(kpi.context || "", {
-        x: x + 0.15, y: y + 0.95, w: cardW - 0.3, h: 0.3,
-        fontSize: 9, color: GREY, fontFace: "Arial",
-      });
-    });
-    addFooter(s6);
+    slides.push(makeSlide("KPI SUMMARY", kpiLines));
   }
 
-  // ── SLIDE 7: CLOSING ────────────────────────────
-  const s7 = pptx.addSlide();
-  addSlideBackground(s7);
-  addRedAccentLine(s7);
+  // Slide 4 — Insights
+  if (insights.length > 0) {
+    const insLines = ["##KEY INSIGHTS & RECOMMENDATIONS", ""];
+    insights.slice(0, 5).forEach((ins, i) => {
+      insLines.push(`##0${i + 1}  ${ins.title}`);
+      insLines.push(ins.detail || "");
+      insLines.push(`Confidence: ${ins.confidence || ""}  |  Source: ${ins.source || ""}`);
+      insLines.push("");
+    });
+    slides.push(makeSlide("INSIGHTS", insLines));
+  }
 
-  s7.addText("ZEVO", {
-    x: 0.6, y: 1.8, w: 8.8, h: 1.2,
-    fontSize: 72, bold: true, color: RED, fontFace: "Arial",
-  });
-  s7.addText("Employees work 9 to 5.\nZEVO works 5 to 9.", {
-    x: 0.6, y: 3.2, w: 8.8, h: 1.0,
-    fontSize: 20, color: WHITE, fontFace: "Arial", italic: true, breakLine: true,
-  });
-  s7.addText("Business Physics Engine", {
-    x: 0.6, y: 4.4, w: 8.8, h: 0.4,
-    fontSize: 12, color: GREY, fontFace: "Arial", charSpacing: 3,
-  });
-  addFooter(s7);
+  // Slide 5 — Anomalies
+  if (anomalies.length > 0) {
+    const anomLines = ["##ANOMALIES DETECTED", ""];
+    anomalies.slice(0, 4).forEach(a => {
+      const prefix = a.severity === "critical" ? "!!" : "##";
+      anomLines.push(`${prefix}${(a.severity || "").toUpperCase()}: ${a.title}`);
+      anomLines.push(a.detail || "");
+      anomLines.push("");
+    });
+    slides.push(makeSlide("ANOMALIES", anomLines));
+  }
 
-  await pptx.writeFile({ fileName: `ZEVO-Brief-${Date.now()}.pptx` });
+  // Slide 6 — Strategic Analysis
+  slides.push(makeSlide(
+    "STRATEGIC ANALYSIS",
+    ["##ZEVO ANALYSIS", "", ...(analysis?.data_story || "").split(". ").map(s => s.trim()).filter(Boolean)]
+  ));
+
+  // Slide 7 — Closing
+  slides.push(makeSlide(
+    "ZEVO",
+    [
+      "##Employees work 9 to 5.",
+      "##ZEVO works 5 to 9.",
+      "",
+      "Business Physics Engine",
+      "Generated automatically by ZEVO.",
+    ]
+  ));
+
+  // Build PPTX package
+  const slideCount = slides.length;
+
+  // _rels/.rels
+  zip.file("_rels/.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
+</Relationships>`);
+
+  // ppt/presentation.xml
+  const slideRefs = slides.map((_, i) => `<p:sldId id="${256 + i}" r:id="rId${i + 1}"/>`).join("\n");
+  zip.file("ppt/presentation.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+                xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <p:sldMasterIdLst><p:sldMasterId id="2147483648" r:id="rId${slideCount + 1}"/></p:sldMasterIdLst>
+  <p:sldSz cx="9144000" cy="6858000"/>
+  <p:notesSz cx="6858000" cy="9144000"/>
+  <p:sldIdLst>${slideRefs}</p:sldIdLst>
+</p:presentation>`);
+
+  // ppt/_rels/presentation.xml.rels
+  const slideRelEntries = slides.map((_, i) =>
+    `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide${i + 1}.xml"/>`
+  ).join("\n");
+  zip.file("ppt/_rels/presentation.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+${slideRelEntries}
+  <Relationship Id="rId${slideCount + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/>
+</Relationships>`);
+
+  // Slides
+  slides.forEach((slideXml, i) => {
+    zip.file(`ppt/slides/slide${i + 1}.xml`, slideXml);
+    zip.file(`ppt/slides/_rels/slide${i + 1}.xml.rels`, `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+</Relationships>`);
+  });
+
+  // Minimal slide master
+  zip.file("ppt/slideMasters/slideMaster1.xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+             xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+             xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <p:cSld><p:bg><p:bgPr><a:solidFill><a:srgbClr val="050508"/></a:solidFill></p:bgPr></p:bg>
+  <p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>
+  <p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>
+  </p:spTree></p:cSld>
+  <p:txStyles><p:titleStyle><a:lvl1pPr><a:defRPr/></a:lvl1pPr></p:titleStyle>
+  <p:bodyStyle><a:lvl1pPr><a:defRPr/></a:lvl1pPr></p:bodyStyle>
+  <p:otherStyle><a:lvl1pPr><a:defRPr/></a:lvl1pPr></p:otherStyle></p:txStyles>
+</p:sldMaster>`);
+
+  zip.file("ppt/slideMasters/_rels/slideMaster1.xml.rels", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+</Relationships>`);
+
+  // [Content_Types].xml
+  const slideContentTypes = slides.map((_, i) =>
+    `<Override PartName="/ppt/slides/slide${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>`
+  ).join("\n");
+  zip.file("[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/>
+  <Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/>
+  ${slideContentTypes}
+</Types>`);
+
+  // Generate and download
+  const blob = await zip.generateAsync({ type: "blob", mimeType: "application/vnd.openxmlformats-officedocument.presentationml.presentation" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `ZEVO-Brief-${Date.now()}.pptx`;
+  link.click();
+  URL.revokeObjectURL(url);
 }
