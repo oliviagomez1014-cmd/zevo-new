@@ -23,7 +23,9 @@ const PROMPT_CHIPS = [
   "How can I improve profitability?",
   "What is the most urgent action?",
 ];
-
+import { speakHuman } from "../utils/voiceEngine";
+// remove your old local `speak` function definition
+// then everywhere you called speak(x), it now calls speakHuman(x) automatically since we import it directly
 export default function Dashboard({
   analysis, profile, mode, onModeChange,
   onNewUpload, onCEOMode,
@@ -100,9 +102,6 @@ useEffect(() => {
     document.body.setAttribute("data-theme", darkMode ? "dark" : "light");
   }, [darkMode]);
 
-import { speakHuman } from "../utils/voiceEngine";
-// remove your old local `speak` function definition
-// then everywhere you called speak(x), it now calls speakHuman(x) automatically since we import it directly
 
   const handleVoiceInput = () => {
     if (!("webkitSpeechRecognition" in window) && !("SpeechRecognition" in window)) {

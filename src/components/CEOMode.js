@@ -1,10 +1,11 @@
+import { speakHuman } from "../utils/voiceEngine";
 export default function CEOMode({ analysis, profile, onViewDashboard, onNewUpload }) {
   const briefing = analysis?.ceo_briefing || {};
   const confidence = analysis?.confidence || {};
   const changelog = analysis?.changelog || [];
   const dispatch = analysis?.morning_dispatch || [];
   const butterfly = analysis?.butterfly_findings || [];
-  import { speakHuman } from "../utils/voiceEngine";
+ 
 
   const getGreeting = () => {
     const hour = new Date().getHours();
