@@ -131,7 +131,7 @@ useEffect(() => {
     try {
       const response = await chatWithZevo(q, analysis?.data_stats, profile, chatHistory);
       setChatHistory([...newHistory, { role: "assistant", content: response }]);
-      speak(response);
+      speakHuman(response);
     } catch {
       setChatHistory([...newHistory, { role: "assistant", content: "ZEVO could not process that. Please try again." }]);
     }
@@ -730,7 +730,7 @@ const renderChart = (chart, i) => {
               onChange={(e) => setChatInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleChat()}
             />
-            <button className="voice-btn" onClick={handleVoiceInput} title="Speak to ZEVO">
+            <button className="voice-btn" onClick={handleVoiceInput} title="SpeakHuman to ZEVO">
               {listening ? "⏹" : "🎤"}
             </button>
             <button className="btn-primary" onClick={() => handleChat()}>→</button>
