@@ -4,6 +4,7 @@ export default function CEOMode({ analysis, profile, onViewDashboard, onNewUploa
   const changelog = analysis?.changelog || [];
   const dispatch = analysis?.morning_dispatch || [];
   const butterfly = analysis?.butterfly_findings || [];
+  import { speakHuman } from "../utils/voiceEngine";
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -19,11 +20,7 @@ export default function CEOMode({ analysis, profile, onViewDashboard, onNewUploa
     const healthy = (briefing.healthy || []).map(i => `${i.title}. ${i.detail}`).join(" ");
     const action = briefing.top_action?.action || "";
     const text = `${briefing.greeting} ${urgent} ${watch} ${healthy} Today's top action: ${action}`;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.9;
-    utterance.pitch = 1;
-    window.speechSynthesis.speak(utterance);
+speakHuman(text);
   };
 
   const getEmoji = (code) => {

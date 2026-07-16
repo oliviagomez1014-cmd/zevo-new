@@ -4,8 +4,10 @@ import Onboarding from "./components/Onboarding";
 import CEOMode from "./components/CEOMode";
 import Dashboard from "./components/Dashboard";
 import Sidebar from "./components/Sidebar";
+import AgentBar from "./components/AgentBar";
 import { readFile, cleanData, computeSummary, computeConfidence, groupAndSum } from "./utils/dataEngine";
 import { getAnalysis } from "./utils/claudeApi";
+import AgentBar from "./components/AgentBar";
 import "./App.css";
 
 export default function App() {
@@ -18,6 +20,9 @@ export default function App() {
   const [activeTab, setActiveTab] = useState("overview");
   const [error, setError] = useState(null);
   const [isFirstTime] = useState(true);
+  const [darkMode, setDarkMode] = useState(true);
+  const [showExportCenter, setShowExportCenter] = useState(false);
+const [showCompare, setShowCompare] = useState(false);
 
   const handleFileSelected = async (file) => {
     setError(null);
@@ -122,11 +127,14 @@ export default function App() {
 
   return (
     <div className="app">
-      <h1 style={{color:"red",fontSize:"40px"}}>
-    TEST APP.JS
-  </h1>
+      
       {screen === "upload" && (
-        <Upload onFileSelected={handleFileSelected} error={error} />
+        <Upload
+  onFileSelected={handleFileSelected}
+  error={error}
+  darkMode={darkMode}
+  setDarkMode={setDarkMode}
+/>
       )}
 
       {screen === "onboarding" && (
@@ -139,7 +147,24 @@ export default function App() {
             activeTab="briefing"
             onTabChange={handleSidebarNav}
           />
+          <AgentBar
+  analysis={analysis}
+  profile={profile}
+  onNavigate={(tab) => { setActiveTab(tab); setScreen("dashboard"); }}
+  onExportPDF={() => window.print()}
+  onTriggerUpload={() => { setScreen("upload"); setAnalysis(null); setRawRows(null); }}
+  onOpenExportCenter={() => setShowExportCenter(true)}
+  onOpenCompare={() => setShowCompare(true)}
+/>
           <div className="main-content">
+           <AgentBar
+            analysis={analysis}
+            onNavigate={(tab) => { setActiveTab(tab); setScreen("dashboard"); }}
+            onExportPDF={() => window.print()}
+            onTriggerUpload={() => { setScreen("upload"); setAnalysis(null); setRawRows(null); }}
+            onAskChat={(q) => { setActiveTab("overview"); setMode("copilot"); }}
+          />
+        
             <CEOMode
               analysis={analysis}
               profile={profile}
@@ -163,8 +188,27 @@ export default function App() {
             activeTab={activeTab}
             onTabChange={handleSidebarNav}
           />
+          <AgentBar
+  analysis={analysis}
+  profile={profile}
+  onNavigate={(tab) => { setActiveTab(tab); setScreen("dashboard"); }}
+  onExportPDF={() => window.print()}
+  onTriggerUpload={() => { setScreen("upload"); setAnalysis(null); setRawRows(null); }}
+  onOpenExportCenter={() => setShowExportCenter(true)}
+  onOpenCompare={() => setShowCompare(true)}
+/>
           <div className="main-content">
+  <AgentBar
+    analysis={analysis}
+    onNavigate={(tab) => { setActiveTab(tab); setScreen("dashboard"); }}
+    onExportPDF={() => window.print()}
+    onTriggerUpload={() => { setScreen("upload"); setAnalysis(null); setRawRows(null); }}
+    onAskChat={(q) => { setActiveTab("overview"); setMode("copilot"); }}
+  />
+          
             <Dashboard
+            darkMode={darkMode}
+  setDarkMode={setDarkMode}
               analysis={analysis}
               profile={profile}
               mode={mode}

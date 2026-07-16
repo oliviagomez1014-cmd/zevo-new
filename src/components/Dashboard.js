@@ -5,6 +5,13 @@ import {
   Tooltip, ResponsiveContainer, PieChart, Pie, Cell
 } from "recharts";
 import { chatWithZevo, runScenario, runRealitySearch } from "../utils/claudeApi";
+import ExportCenter from "./ExportCenter";
+import MultiFileCompare from "./MultiFileCompare";
+
+
+// ...
+const [showExportCenter, setShowExportCenter] = useState(false);
+const [showCompare, setShowCompare] = useState(false);
 
 const DEFAULT_COLORS = ["#FF1E3C", "#3B4FFF", "#00FF88", "#FFB800", "#a78bfa", "#22D3EE"];
 
@@ -48,6 +55,8 @@ export default function Dashboard({
 const [renamingId, setRenamingId] = useState(null);
 const [sessions, setSessions] = useState([]);
 const [chartFontSize, setChartFontSize] = useState(13);
+const [fullscreenChart, setFullscreenChart] = useState(null);
+const [activeChartId, setActiveChartId] = useState(null);
 
 const refreshHistory = () => setSessions(loadMemory().sessions);
 
@@ -91,20 +100,9 @@ useEffect(() => {
     document.body.setAttribute("data-theme", darkMode ? "dark" : "light");
   }, [darkMode]);
 
-  const speak = (text) => {
-    if ("speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.9;
-      utterance.pitch = 1.1;
-      const voices = window.speechSynthesis.getVoices();
-      const preferred = voices.find(v =>
-        v.name.includes("Google") || v.name.includes("Natural") || v.name.includes("Premium")
-      );
-      if (preferred) utterance.voice = preferred;
-      window.speechSynthesis.speak(utterance);
-    }
-  };
+import { speakHuman } from "../utils/voiceEngine";
+// remove your old local `speak` function definition
+// then everywhere you called speak(x), it now calls speakHuman(x) automatically since we import it directly
 
   const handleVoiceInput = () => {
     if (!("webkitSpeechRecognition" in window) && !("SpeechRecognition" in window)) {
@@ -230,78 +228,62 @@ useEffect(() => {
   };
   // const getEmoji = (code) => code === "RED" ? "🔴" : code === "YELLOW" ? "🟡" : code === "GREEN" ? "🟢" : code;
 
-  const renderChart = (chart, i) => {
-    const key = `${chart.x_column}_${chart.y_column}`;
-    const data = chartData[key];
-    if (!data || data.length === 0) return null;
-    const type = chartType || chart.type;
-    const color = chartColor;
-    return (
-      <div key={i} className="chart-card">
-        <div className="chart-card-header">
-          <div className="chart-title">{chart.title}</div>
-         <div className="chart-controls">
-  <input
-    type="color"
-    value={chartColor}
-    onChange={(e) => setChartColor(e.target.value)}
-    title="Chart color"
-    className="color-picker"
-  />
+const renderChart = (chart, i) => {
+  const key = `${chart.x_column}_${chart.y_column}`;
+  const data = chartData[key];
+  if (!data || data.length === 0) return null;
+  const type = chartType || chart.type;
+  const color = chartColor;
+  const isFullscreen = fullscreenChart === i;
 
-  <select
-    value={chartType}
-    onChange={(e) => setChartType(e.target.value)}
-    className="chart-type-select"
-  >
-    <option value="bar">Bar</option>
-    <option value="line">Line</option>
-    <option value="pie">Pie</option>
-  </select>
-
-  <select
-    value={chartFontSize}
-    onChange={(e) => setChartFontSize(Number(e.target.value))}
-    className="chart-type-select"
-  >
-    <option value="10">Small Font</option>
-    <option value="13">Medium Font</option>
-    <option value="16">Large Font</option>
-  </select>
-</div>
-</div>
-        <div className="chart-insight">{chart.insight}</div>
-        <div className="chart-body">
-          <ResponsiveContainer width="100%" height={220}>
-            {type === "bar" ? (
-              <BarChart data={data}>
-                <XAxis dataKey={chart.x_column} tick={{ fontSize:  chartFontSize , fill: "#7A8499" }} />
-                <YAxis tick={{ fontSize: chartFontSize, fill: "#7A8499" }} />
-                <Tooltip contentStyle={{ background: "#0C0C18", border: "1px solid rgba(255,30,60,0.2)", color: "#F0F4FF", borderRadius: "8px" }} />
-                <Bar dataKey={chart.y_column} fill={color} radius={[4, 4, 0, 0]} />
-              </BarChart>
-            ) : type === "line" ? (
-              <LineChart data={data}>
-                <XAxis dataKey={chart.x_column} tick={{ fontSize: chartFontSize, fill: "#7A8499" }} />
-                <YAxis tick={{ fontSize: chartFontSize, fill: "#7A8499" }} />
-                <Tooltip contentStyle={{ background: "#0C0C18", border: "1px solid rgba(255,30,60,0.2)", color: "#F0F4FF", borderRadius: "8px",fontSize: chartFontSize }} />
-                <Line type="monotone" dataKey={chart.y_column} stroke={color} strokeWidth={2} dot={false} />
-              </LineChart>
-            ) : (
-              <PieChart>
-                <Pie data={data} dataKey={chart.y_column} nameKey={chart.x_column} cx="50%" cy="50%" outerRadius={80}>
-                  {data.map((_, index) => (
-                    <Cell key={index} fill={index === 0 ? color : DEFAULT_COLORS[index % DEFAULT_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip contentStyle={{ background: "#0C0C18", border: "1px solid rgba(255,30,60,0.2)", color: "#F0F4FF", borderRadius: "8px" }} />
-              </PieChart>
-            )}
-          </ResponsiveContainer>
+  return (
+    <div key={i} className={`chart-card ${isFullscreen ? "chart-fullscreen" : ""}`} id={isFullscreen ? "active-chart" : undefined}>
+      <div className="chart-card-header">
+        <div className="chart-title">{chart.title}</div>
+        <div className="chart-controls">
+          <input type="color" value={chartColor} onChange={(e) => setChartColor(e.target.value)} title="Chart color" className="color-picker" />
+          <select value={chartType} onChange={(e) => setChartType(e.target.value)} className="chart-type-select">
+            <option value="bar">Bar</option>
+            <option value="line">Line</option>
+            <option value="pie">Pie</option>
+          </select>
+          <button className="chart-icon-btn" onClick={() => setFullscreenChart(isFullscreen ? null : i)} title="Fullscreen">
+            {isFullscreen ? "⤢" : "⛶"}
+          </button>
         </div>
       </div>
-    );
-  };
+      <div className="chart-insight">{chart.insight}</div>
+      <div className="chart-body" onMouseEnter={() => setActiveChartId(i)}>
+        <ResponsiveContainer width="100%" height={isFullscreen ? 480 : 220}>
+          {type === "bar" ? (
+            <BarChart data={data}>
+              <XAxis dataKey={chart.x_column} tick={{ fontSize: chartFontSize, fill: "#7A8499" }} />
+              <YAxis tick={{ fontSize: chartFontSize, fill: "#7A8499" }} />
+              <Tooltip contentStyle={{ background: "#0C0C18", border: "1px solid rgba(255,30,60,0.2)", color: "#F0F4FF", borderRadius: "8px" }} animationDuration={200} />
+              <Bar dataKey={chart.y_column} fill={color} radius={[4, 4, 0, 0]} animationDuration={800} />
+            </BarChart>
+          ) : type === "line" ? (
+            <LineChart data={data}>
+              <XAxis dataKey={chart.x_column} tick={{ fontSize: chartFontSize, fill: "#7A8499" }} />
+              <YAxis tick={{ fontSize: chartFontSize, fill: "#7A8499" }} />
+              <Tooltip contentStyle={{ background: "#0C0C18", border: "1px solid rgba(255,30,60,0.2)", color: "#F0F4FF", borderRadius: "8px" }} animationDuration={200} />
+              <Line type="monotone" dataKey={chart.y_column} stroke={color} strokeWidth={2} dot={false} animationDuration={800} />
+            </LineChart>
+          ) : (
+            <PieChart>
+              <Pie data={data} dataKey={chart.y_column} nameKey={chart.x_column} cx="50%" cy="50%" outerRadius={isFullscreen ? 180 : 80} animationDuration={800}>
+                {data.map((_, index) => (
+                  <Cell key={index} fill={index === 0 ? color : DEFAULT_COLORS[index % DEFAULT_COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip contentStyle={{ background: "#0C0C18", border: "1px solid rgba(255,30,60,0.2)", color: "#F0F4FF", borderRadius: "8px" }} />
+            </PieChart>
+          )}
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+};
 
   return (
     <div className="dashboard">
@@ -324,6 +306,8 @@ useEffect(() => {
           <button className="btn-ghost" onClick={onCEOMode}>Morning Brief</button>
           <button className="btn-ghost" onClick={onNewUpload}>New Upload</button>
           <button className="btn-primary" onClick={handleExportPDF}>Export PDF</button>
+          <button className="btn-ghost" onClick={() => setShowExportCenter(true)}>Export Center</button>
+<button className="btn-ghost" onClick={() => setShowCompare(true)}>Compare Files</button>
         </div>
       </div>
 
@@ -757,6 +741,10 @@ useEffect(() => {
           </div>
         </div>
       )}  
+      {showExportCenter && (
+  <ExportCenter analysis={analysis} rawRows={[]} onClose={() => setShowExportCenter(false)} onExportPDF={handleExportPDF} />
+)}
+{showCompare && <MultiFileCompare onClose={() => setShowCompare(false)} />}
     </div>
   );
 }

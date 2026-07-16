@@ -1,9 +1,13 @@
 import { useState, useRef } from "react";
 
-export default function Upload({ onFileSelected, error }) {
+export default function Upload({
+  onFileSelected,
+  error,
+  darkMode,
+  setDarkMode,
+}) {
   const [dragging, setDragging] = useState(false);
   const [fileName, setFileName] = useState(null);
-  const [darkMode, setDarkMode] = useState(true);
   const inputRef = useRef();
 
   const handleFile = (file) => {
