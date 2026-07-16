@@ -59,9 +59,7 @@ const [fullscreenChart, setFullscreenChart] = useState(null);
 // eslint-disable-next-line no-unused-vars
 const [activeChartId, setActiveChartId] = useState(null);
 // eslint-disable-next-line no-unused-vars
-const [showExportCenter, setShowExportCenter] = useState(false);
-// eslint-disable-next-line no-unused-vars
-const [showCompare, setShowCompare] = useState(false);
+
 
 const refreshHistory = () => setSessions(loadMemory().sessions);
 
