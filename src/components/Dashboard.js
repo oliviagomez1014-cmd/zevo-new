@@ -51,10 +51,14 @@ export default function Dashboard({
   const [historySearch, setHistorySearch] = useState("");
 const [renamingId, setRenamingId] = useState(null);
 const [sessions, setSessions] = useState([]);
+// eslint-disable-next-line no-unused-vars
 const [chartFontSize, setChartFontSize] = useState(13);
 const [fullscreenChart, setFullscreenChart] = useState(null);
+// eslint-disable-next-line no-unused-vars
 const [activeChartId, setActiveChartId] = useState(null);
+// eslint-disable-next-line no-unused-vars
 const [showExportCenter, setShowExportCenter] = useState(false);
+// eslint-disable-next-line no-unused-vars
 const [showCompare, setShowCompare] = useState(false);
 
 const refreshHistory = () => setSessions(loadMemory().sessions);
