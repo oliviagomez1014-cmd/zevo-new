@@ -2,13 +2,28 @@
 // Pure browser PPTX generation — no Node.js dependencies, works on Vercel.
 // Generates a real .pptx file using raw XML/ZIP (Office Open XML format).
 
-async function loadJSZip() {
+import JSZip from "jszip";
+
+function loadJSZip() {
+  if (window.JSZip) return Promise.resolve(window.JSZip);
+  
   return new Promise((resolve, reject) => {
-    if (window.JSZip) { resolve(window.JSZip); return; }
+    const existing = document.querySelector('script[data-jszip]');
+    if (existing) {
+      const check = setInterval(() => {
+        if (window.JSZip) { clearInterval(check); resolve(window.JSZip); }
+      }, 50);
+      return;
+    }
     const script = document.createElement("script");
     script.src = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";
-    script.onload = () => resolve(window.JSZip);
-    script.onerror = reject;
+    script.setAttribute("data-jszip", "true");
+    script.onload = () => {
+      const check = setInterval(() => {
+        if (window.JSZip) { clearInterval(check); resolve(window.JSZip); }
+      }, 50);
+    };
+    script.onerror = () => reject(new Error("Failed to load JSZip"));
     document.head.appendChild(script);
   });
 }
@@ -115,7 +130,6 @@ function makeSlide(titleText, bodyLines = [], accentColor = "FF1E3C") {
 }
 
 export async function generatePPTX(analysis) {
-  const JSZip = await loadJSZip();
   const zip = new JSZip();
   const briefing = analysis?.ceo_briefing || {};
   const insights = analysis?.insights || [];
