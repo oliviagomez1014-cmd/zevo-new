@@ -130,7 +130,8 @@ function makeSlide(titleText, bodyLines = [], accentColor = "FF1E3C") {
 }
 
 export async function generatePPTX(analysis) {
-  const zip = new JSZip();
+  const JSZipLib = await loadJSZip();
+  const zip = new JSZipLib();
   const briefing = analysis?.ceo_briefing || {};
   const insights = analysis?.insights || [];
   const anomalies = analysis?.anomalies || [];
