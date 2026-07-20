@@ -2,7 +2,6 @@
 // Pure browser PPTX generation — no Node.js dependencies, works on Vercel.
 // Generates a real .pptx file using raw XML/ZIP (Office Open XML format).
 
-import JSZip from "jszip";
 
 function loadJSZip() {
   if (window.JSZip) return Promise.resolve(window.JSZip);

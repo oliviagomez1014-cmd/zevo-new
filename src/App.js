@@ -19,7 +19,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState("overview");
   const [error, setError] = useState(null);
   const [isFirstTime] = useState(true);
-  const [darkMode, setDarkMode] = useState(true);
+
 
 
   const handleFileSelected = async (file) => {
