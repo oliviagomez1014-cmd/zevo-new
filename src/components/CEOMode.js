@@ -1,3 +1,4 @@
+
 import { speakHuman } from "../utils/voiceEngine";
 export default function CEOMode({ analysis, profile, onViewDashboard, onNewUpload }) {
   const briefing = analysis?.ceo_briefing || {};
@@ -40,7 +41,7 @@ speakHuman(text);
         </div>
         <div className="ceo-header-actions">
           <button className="btn-ghost" onClick={readBriefAloud}>
-            🔊 Read Aloud
+             Read Aloud
           </button>
           <button className="btn-ghost" onClick={onNewUpload}>
             New Upload

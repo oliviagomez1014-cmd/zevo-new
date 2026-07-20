@@ -9,6 +9,7 @@ import { readFile, cleanData, computeSummary, computeConfidence, groupAndSum } f
 import { getAnalysis } from "./utils/claudeApi";
 import "./App.css";
 
+
 export default function App() {
   const [screen, setScreen] = useState("upload");
   const [rawRows, setRawRows] = useState(null);
@@ -91,6 +92,7 @@ export default function App() {
       setScreen("upload");
     }
   };
+ 
 
   const handleSidebarNav = (tab) => {
     const dashboardTabs = ["overview", "anomalies", "insights", "charts", "scenarios", "reality"];
@@ -148,6 +150,7 @@ return (
             onTriggerUpload={() => { setScreen("upload"); setAnalysis(null); setRawRows(null); }}
 
           />
+          
           {screen === "ceo" && (
             <CEOMode
               analysis={analysis}
