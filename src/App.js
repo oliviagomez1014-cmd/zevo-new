@@ -123,104 +123,55 @@ export default function App() {
     );
   }
 
-  return (
-    <div className="app">
-      
-      {screen === "upload" && (
-        <Upload
-  onFileSelected={handleFileSelected}
-  error={error}
-  darkMode={darkMode}
-  setDarkMode={setDarkMode}
-/>
-      )}
+return (
+  <div className="app">
+    {screen === "upload" && (
+      <Upload onFileSelected={handleFileSelected} error={error} />
+    )}
 
-      {screen === "onboarding" && (
-        <Onboarding onComplete={handleOnboardingComplete} />
-      )}
+    {screen === "onboarding" && (
+      <Onboarding onComplete={handleOnboardingComplete} />
+    )}
 
-      {screen === "ceo" && analysis && (
-        <div className="app-shell">
-          <Sidebar
-            activeTab="briefing"
-            onTabChange={handleSidebarNav}
-          />
+    {(screen === "ceo" || screen === "dashboard") && analysis && (
+      <div className="app-shell">
+        <Sidebar
+          activeTab={screen === "ceo" ? "briefing" : activeTab}
+          onTabChange={handleSidebarNav}
+        />
+        <div className="main-content">
           <AgentBar
-  analysis={analysis}
-  profile={profile}
-  onNavigate={(tab) => { setActiveTab(tab); setScreen("dashboard"); }}
-  onExportPDF={() => window.print()}
-  onTriggerUpload={() => { setScreen("upload"); setAnalysis(null); setRawRows(null); }}
-
-/>
-          <div className="main-content">
-           <AgentBar
             analysis={analysis}
+            profile={profile}
             onNavigate={(tab) => { setActiveTab(tab); setScreen("dashboard"); }}
-            onExportPDF={() => window.print()}
+            onExportPDF={() => {}}
             onTriggerUpload={() => { setScreen("upload"); setAnalysis(null); setRawRows(null); }}
-            onAskChat={(q) => { setActiveTab("overview"); setMode("copilot"); }}
+            onOpenExportCenter={() => setShowExportCenter(true)}
+            onOpenCompare={() => setShowCompare(true)}
           />
-        
+          {screen === "ceo" && (
             <CEOMode
               analysis={analysis}
               profile={profile}
-              onViewDashboard={() => {
-                setActiveTab("overview");
-                setScreen("dashboard");
-              }}
-              onNewUpload={() => {
-                setScreen("upload");
-                setAnalysis(null);
-                setRawRows(null);
-              }}
+              onViewDashboard={() => { setActiveTab("overview"); setScreen("dashboard"); }}
+              onNewUpload={() => { setScreen("upload"); setAnalysis(null); setRawRows(null); }}
             />
-          </div>
-        </div>
-      )}
-
-      {screen === "dashboard" && analysis && (
-        <div className="app-shell">
-          <Sidebar
-            activeTab={activeTab}
-            onTabChange={handleSidebarNav}
-          />
-          <AgentBar
-  analysis={analysis}
-  profile={profile}
-  onNavigate={(tab) => { setActiveTab(tab); setScreen("dashboard"); }}
-  onExportPDF={() => window.print()}
-  onTriggerUpload={() => { setScreen("upload"); setAnalysis(null); setRawRows(null); }}
-
-/>
-          <div className="main-content">
-  <AgentBar
-    analysis={analysis}
-    onNavigate={(tab) => { setActiveTab(tab); setScreen("dashboard"); }}
-    onExportPDF={() => window.print()}
-    onTriggerUpload={() => { setScreen("upload"); setAnalysis(null); setRawRows(null); }}
-    onAskChat={(q) => { setActiveTab("overview"); setMode("copilot"); }}
-  />
-          
+          )}
+          {screen === "dashboard" && (
             <Dashboard
-            darkMode={darkMode}
-  setDarkMode={setDarkMode}
               analysis={analysis}
               profile={profile}
               mode={mode}
               onModeChange={setMode}
               activeTab={activeTab}
               onTabChange={setActiveTab}
-              onNewUpload={() => {
-                setScreen("upload");
-                setAnalysis(null);
-                setRawRows(null);
-              }}
+              onNewUpload={() => { setScreen("upload"); setAnalysis(null); setRawRows(null); }}
               onCEOMode={() => setScreen("ceo")}
             />
-          </div>
+          )}
         </div>
-      )}
-    </div>
-  );
+      </div>
+    )}
+  </div>
+);
 }

@@ -69,6 +69,8 @@ body {
 .app-shell {
   display: flex;
   min-height: 100vh;
+  width: 100vw;
+  overflow: hidden;
 }
 
 /* ── ANIMATIONS ──────────────────────────── */
@@ -97,15 +99,18 @@ body {
 /* ── SIDEBAR ─────────────────────────────── */
 .sidebar {
   width: var(--sidebar-w);
+  min-width: var(--sidebar-w);
+  max-width: var(--sidebar-w);
   background: var(--surface);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   position: fixed;
-  top: 0; left: 0; bottom: 0;
+  top: 0;
+  left: 0;
+  bottom: 0;
   z-index: 100;
-  padding: 28px 0;
-  overflow: hidden;
+  overflow-y: auto;
 }
 .sidebar::before {
   content: '';
@@ -233,11 +238,10 @@ body {
 /* ── MAIN CONTENT ────────────────────────── */
 .main-content {
   margin-left: var(--sidebar-w);
-  flex: 1;
+  width: calc(100vw - var(--sidebar-w));
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-  width: calc(100vw - var(--sidebar-w));
   overflow-x: hidden;
 }
 /* ── WORDMARKS ───────────────────────────── */
@@ -333,18 +337,20 @@ body {
   display: flex;
   flex-direction: column;
   width: 100%;
-  min-height: 0;
 }
 .ceo-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 40px;
+  padding: 16px 48px;
   border-bottom: 1px solid var(--border);
   background: rgba(10,10,20,0.9);
   backdrop-filter: blur(20px);
   width: 100%;
   flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 .ceo-header-actions { display: flex; gap: 10px; }
 .ceo-content {
@@ -446,10 +452,23 @@ body {
   background: var(--bg);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  min-height: 0;
+  width: 100%;
 }
-.dash-topbar { display: flex; align-items: center; padding: 0 28px; height: var(--topbar-h); border-bottom: 1px solid var(--border); background: rgba(10,10,20,0.9); gap: 20px; position: sticky; top: 0; z-index: 50; backdrop-filter: blur(20px); }
+.dash-topbar {
+  display: flex;
+  align-items: center;
+  padding: 0 28px;
+  height: var(--topbar-h);
+  border-bottom: 1px solid var(--border);
+  background: rgba(10,10,20,0.9);
+  gap: 20px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  backdrop-filter: blur(20px);
+  width: 100%;
+  flex-shrink: 0;
+}
 .dash-tabs { display: flex; flex: 1; gap: 2px; overflow-x: auto; }
 .dash-tab { background: none; border: none; color: var(--text-muted); padding: 7px 14px; cursor: pointer; font-size: 11px; font-weight: 700; border-radius: var(--radius-xs); transition: all 0.15s; font-family: var(--font-body); white-space: nowrap; text-transform: uppercase; letter-spacing: 0.8px; }
 .dash-tab:hover { color: var(--text-sec); background: var(--card); }
@@ -470,7 +489,6 @@ body {
   padding: 32px;
   padding-bottom: 240px;
   overflow-y: auto;
-  min-height: 0;
 }
 .tab-content { display: flex; flex-direction: column; gap: 28px; max-width: 1200px; }
 .tab-intro { color: var(--text-sec); font-size: 13px; }
