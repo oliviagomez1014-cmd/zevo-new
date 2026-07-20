@@ -146,8 +146,7 @@ return (
             onNavigate={(tab) => { setActiveTab(tab); setScreen("dashboard"); }}
             onExportPDF={() => {}}
             onTriggerUpload={() => { setScreen("upload"); setAnalysis(null); setRawRows(null); }}
-            onOpenExportCenter={() => setShowExportCenter(true)}
-            onOpenCompare={() => setShowCompare(true)}
+
           />
           {screen === "ceo" && (
             <CEOMode
